@@ -5,8 +5,11 @@ import express, {
   type Response,
 } from "express"
 import helmet from "helmet"
+import { ZodError } from "zod"
 import { env } from "./config/env"
 import { supabase } from "./lib/supabase"
+import { apiRouter } from "./routes"
+import { ApiError } from "./utils/errors"
 import { sendError, sendOk } from "./utils/response"
 
 const app = express()
@@ -20,10 +23,7 @@ app.use(express.json())
 app.get("/health", async (_req: Request, res: Response) => {
   let supabaseReachable = false
   try {
-    // Lightweight connectivity probe. This call succeeds even before any
-    // application tables exist; a network/config failure will throw.
     const { error } = await supabase.auth.getUser("health-check-probe")
-    // An "invalid token" style error still proves we reached Supabase.
     supabaseReachable = error === null || typeof error.message === "string"
   } catch {
     supabaseReachable = false
@@ -38,6 +38,9 @@ app.get("/health", async (_req: Request, res: Response) => {
   })
 })
 
+// Versioned API routes
+app.use("/api/v1", apiRouter)
+
 // 404 fallback
 app.use((_req: Request, res: Response) => {
   return sendError(res, "Route not found", 404)
@@ -45,9 +48,14 @@ app.use((_req: Request, res: Response) => {
 
 // Centralized error handler
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
-  const message = err instanceof Error ? err.message : "Internal server error"
+  if (err instanceof ZodError) {
+    return sendError(res, "Validation failed", 400, err.flatten())
+  }
+  if (err instanceof ApiError) {
+    return sendError(res, err.message, err.status, err.details)
+  }
   console.error("Unhandled error:", err)
-  return sendError(res, message, 500)
+  return sendError(res, "Internal server error", 500)
 })
 
 // Render requires listening on process.env.PORT (validated in config/env.ts).
