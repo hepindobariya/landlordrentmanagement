@@ -8,6 +8,8 @@ import helmet from "helmet"
 import { ZodError } from "zod"
 import { env } from "./config/env"
 import { supabase } from "./lib/supabase"
+import { downloadRouter } from "./modules/download/download.routes"
+import { webhooksRouter } from "./modules/webhooks/webhooks.routes"
 import { apiRouter } from "./routes"
 import { ApiError } from "./utils/errors"
 import { sendError, sendOk } from "./utils/response"
@@ -17,6 +19,16 @@ const app = express()
 // Core middleware
 app.use(helmet())
 app.use(cors())
+
+// ---------------------------------------------------------------------------
+// PUBLIC routes (no Bearer auth). Mounted BEFORE express.json() because the
+// EAS webhook needs the RAW request body for HMAC signature verification.
+// (The /download route is a GET returning HTML, so it needs no body parsing.)
+// ---------------------------------------------------------------------------
+app.use("/webhooks", webhooksRouter)
+app.use("/download", downloadRouter)
+
+// JSON parsing for the rest of the API.
 app.use(express.json())
 
 // Health check — verifies the server is up and Supabase is reachable.
@@ -38,7 +50,7 @@ app.get("/health", async (_req: Request, res: Response) => {
   })
 })
 
-// Versioned API routes
+// Versioned API routes (all require a valid Supabase access token).
 app.use("/api/v1", apiRouter)
 
 // 404 fallback

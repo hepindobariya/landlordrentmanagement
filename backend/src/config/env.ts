@@ -15,6 +15,9 @@ const envSchema = z.object({
     .min(1, "SUPABASE_SERVICE_ROLE_KEY is required"),
   // Optional now; needed when we verify end-user access tokens in later stages.
   SUPABASE_ANON_KEY: z.string().min(1).optional(),
+  // Optional so the server still boots before you set it; the webhook route
+  // returns 500 if it's missing when a webhook actually arrives.
+  EAS_WEBHOOK_SECRET: z.string().min(1).optional(),
 })
 
 const parsed = envSchema.safeParse(process.env)
