@@ -17,7 +17,7 @@ import { sendError, sendOk } from "./utils/response"
 const app = express()
 
 // Core middleware
-app.use(helmet())
+app.use(helmet({ contentSecurityPolicy: false }))
 app.use(cors())
 
 // ---------------------------------------------------------------------------
@@ -27,6 +27,11 @@ app.use(cors())
 // ---------------------------------------------------------------------------
 app.use("/webhooks", webhooksRouter)
 app.use("/download", downloadRouter)
+
+// Serve the static frontend (landing page and PWA)
+import path from "path"
+app.use(express.static(path.join(process.cwd(), "public")))
+
 
 // JSON parsing for the rest of the API.
 app.use(express.json())
