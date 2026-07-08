@@ -2,9 +2,10 @@ import { Session } from "@supabase/supabase-js"
 import { StatusBar } from "expo-status-bar"
 import React, { useEffect, useState } from "react"
 import { ActivityIndicator, StyleSheet, View } from "react-native"
+import { SafeAreaProvider } from "react-native-safe-area-context"
 import { supabase } from "./src/lib/supabase"
+import AppNavigator from "./src/navigation/AppNavigator"
 import LoginScreen from "./src/screens/LoginScreen"
-import PropertiesScreen from "./src/screens/PropertiesScreen"
 import { colors } from "./src/theme"
 
 export default function App() {
@@ -18,7 +19,7 @@ export default function App() {
       setInitializing(false)
     })
 
-    // Keep the UI in sync with login/logout events.
+    // Keep the UI in sync with login/logout events (Stage 1 listener).
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, newSession) => {
@@ -30,19 +31,19 @@ export default function App() {
     }
   }, [])
 
-  if (initializing) {
-    return (
-      <View style={styles.loading}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    )
-  }
-
   return (
-    <>
+    <SafeAreaProvider>
       <StatusBar style="dark" />
-      {session ? <PropertiesScreen /> : <LoginScreen />}
-    </>
+      {initializing ? (
+        <View style={styles.loading}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      ) : session ? (
+        <AppNavigator />
+      ) : (
+        <LoginScreen />
+      )}
+    </SafeAreaProvider>
   )
 }
 

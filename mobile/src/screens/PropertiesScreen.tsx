@@ -1,31 +1,47 @@
-import React, { useCallback, useEffect, useState } from "react"
+import { useFocusEffect } from "@react-navigation/native"
+import type { NativeStackScreenProps } from "@react-navigation/native-stack"
+import React, { useCallback, useLayoutEffect, useState } from "react"
 import {
-  ActivityIndicator,
   FlatList,
   RefreshControl,
-  SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
 } from "react-native"
+import { CenteredMessage } from "../components/ui"
 import { apiFetch } from "../lib/api"
 import { supabase } from "../lib/supabase"
+import type { RootStackParamList } from "../navigation/AppNavigator"
 import { colors, spacing } from "../theme"
+import type { Property } from "../types"
 
-type Property = {
-  id: string
-  landlord_id: string
-  name: string
-  address: string | null
-  created_at: string
-}
+type Props = NativeStackScreenProps<RootStackParamList, "Properties">
 
-export default function PropertiesScreen() {
+export default function PropertiesScreen({ navigation }: Props) {
   const [properties, setProperties] = useState<Property[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Configure the navigator's header: title, Log Out (left), and + (right).
+  // This replaces the old Stage 1 custom in-screen header.
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      title: "Properties",
+      headerLeft: () => (
+        <TouchableOpacity onPress={() => supabase.auth.signOut()}>
+          <Text style={styles.logoutText}>Log Out</Text>
+        </TouchableOpacity>
+      ),
+      headerRight: () => (
+        <TouchableOpacity
+          onPress={() => navigation.navigate("PropertyForm", {})}
+        >
+          <Text style={styles.addText}>＋</Text>
+        </TouchableOpacity>
+      ),
+    })
+  }, [navigation])
 
   const load = useCallback(async (mode: "initial" | "refresh") => {
     if (mode === "initial") setLoading(true)
@@ -43,150 +59,71 @@ export default function PropertiesScreen() {
     }
   }, [])
 
-  useEffect(() => {
-    load("initial")
-  }, [load])
+  // Reload whenever this screen comes into focus (e.g., after add/edit/delete).
+  useFocusEffect(
+    useCallback(() => {
+      load("initial")
+    }, [load])
+  )
 
-  async function handleLogout() {
-    await supabase.auth.signOut()
-    // The auth listener in App.tsx returns to the Login screen.
+  if (loading) {
+    return <CenteredMessage loading text="Loading properties…" />
   }
 
-  function renderBody() {
-    if (loading) {
-      return (
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.mutedText}>Loading properties…</Text>
-        </View>
-      )
-    }
-
-    if (error) {
-      return (
-        <View style={styles.centered}>
-          <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity
-            style={styles.retryButton}
-            onPress={() => load("initial")}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.retryButtonText}>Try Again</Text>
-          </TouchableOpacity>
-        </View>
-      )
-    }
-
-    if (properties.length === 0) {
-      return (
-        <View style={styles.centered}>
-          <Text style={styles.emptyTitle}>No properties yet</Text>
-          <Text style={styles.mutedText}>
-            Properties you add will show up here.
-          </Text>
-        </View>
-      )
-    }
-
+  if (error) {
     return (
-      <FlatList
-        data={properties}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={() => load("refresh")}
-            tintColor={colors.primary}
-          />
-        }
-        renderItem={({ item }) => (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>{item.name}</Text>
-            <Text style={styles.cardSubtitle}>
-              {item.address ?? "No address on file"}
-            </Text>
-          </View>
-        )}
+      <CenteredMessage
+        error
+        text={error}
+        actionLabel="Try Again"
+        onAction={() => load("initial")}
       />
     )
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Properties</Text>
-        <TouchableOpacity onPress={handleLogout} activeOpacity={0.7}>
-          <Text style={styles.logout}>Log Out</Text>
+    <FlatList
+      data={properties}
+      keyExtractor={(item) => item.id}
+      contentContainerStyle={
+        properties.length === 0 ? styles.emptyContainer : styles.listContent
+      }
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={() => load("refresh")}
+          tintColor={colors.primary}
+        />
+      }
+      ListEmptyComponent={
+        <CenteredMessage
+          text="No properties yet"
+          subtext="Tap the + button to add your first property."
+        />
+      }
+      renderItem={({ item }) => (
+        <TouchableOpacity
+          style={styles.card}
+          activeOpacity={0.7}
+          onPress={() =>
+            navigation.navigate("PropertyDetail", { propertyId: item.id })
+          }
+        >
+          <Text style={styles.cardTitle}>{item.name}</Text>
+          <Text style={styles.cardSubtitle}>
+            {item.address ?? "No address on file"}
+          </Text>
         </TouchableOpacity>
-      </View>
-      {renderBody()}
-    </SafeAreaView>
+      )}
+    />
   )
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    backgroundColor: colors.card,
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: colors.text,
-  },
-  logout: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: colors.danger,
-  },
-  centered: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: spacing.lg,
-  },
-  mutedText: {
-    color: colors.muted,
-    fontSize: 15,
-    marginTop: spacing.sm,
-    textAlign: "center",
-  },
-  errorText: {
-    color: colors.danger,
-    fontSize: 15,
-    textAlign: "center",
-    marginBottom: spacing.md,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: colors.text,
-  },
-  retryButton: {
-    backgroundColor: colors.primary,
-    borderRadius: 10,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-  },
-  retryButtonText: {
-    color: colors.white,
-    fontWeight: "700",
-    fontSize: 15,
-  },
-  listContent: {
-    padding: spacing.md,
-  },
+  logoutText: { color: colors.danger, fontWeight: "600", fontSize: 15 },
+  addText: { color: colors.primary, fontWeight: "700", fontSize: 26 },
+  listContent: { padding: spacing.md },
+  emptyContainer: { flexGrow: 1 },
   card: {
     backgroundColor: colors.card,
     borderRadius: 12,
@@ -195,14 +132,6 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     marginBottom: spacing.md,
   },
-  cardTitle: {
-    fontSize: 17,
-    fontWeight: "700",
-    color: colors.text,
-  },
-  cardSubtitle: {
-    fontSize: 14,
-    color: colors.muted,
-    marginTop: spacing.xs,
-  },
+  cardTitle: { fontSize: 17, fontWeight: "700", color: colors.text },
+  cardSubtitle: { fontSize: 14, color: colors.muted, marginTop: spacing.xs },
 })

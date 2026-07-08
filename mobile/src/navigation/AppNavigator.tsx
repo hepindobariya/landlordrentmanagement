@@ -1,8 +1,6 @@
 import { NavigationContainer } from "@react-navigation/native"
 import { createNativeStackNavigator } from "@react-navigation/native-stack"
 import React from "react"
-import { StyleSheet, Text, TouchableOpacity } from "react-native"
-import { supabase } from "../lib/supabase"
 import PropertiesScreen from "../screens/PropertiesScreen"
 import PropertyDetailScreen from "../screens/PropertyDetailScreen"
 import PropertyFormScreen from "../screens/PropertyFormScreen"
@@ -33,21 +31,7 @@ export default function AppNavigator() {
         <Stack.Screen
           name="Properties"
           component={PropertiesScreen}
-          options={({ navigation }) => ({
-            title: "Properties",
-            headerLeft: () => (
-              <TouchableOpacity onPress={() => supabase.auth.signOut()}>
-                <Text style={styles.logoutText}>Log Out</Text>
-              </TouchableOpacity>
-            ),
-            headerRight: () => (
-              <TouchableOpacity
-                onPress={() => navigation.navigate("PropertyForm", {})}
-              >
-                <Text style={styles.addText}>＋</Text>
-              </TouchableOpacity>
-            ),
-          })}
+          options={{ title: "Properties" }}
         />
         <Stack.Screen
           name="PropertyDetail"
@@ -68,8 +52,3 @@ export default function AppNavigator() {
     </NavigationContainer>
   )
 }
-
-const styles = StyleSheet.create({
-  logoutText: { color: colors.danger, fontWeight: "600", fontSize: 15 },
-  addText: { color: colors.primary, fontWeight: "700", fontSize: 26 },
-})
