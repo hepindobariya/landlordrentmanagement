@@ -9,3 +9,16 @@ export const isoDateSchema = z
 
 // For routes with an :id path param.
 export const idParamSchema = z.object({ id: uuidSchema })
+
+// Optional pagination shared across list endpoints. Backward compatible:
+// when limit/offset are omitted, endpoints return the full (ordered) list.
+export const paginationSchema = z.object({
+  limit: z.coerce.number().int().positive().max(200).optional(),
+  offset: z.coerce.number().int().nonnegative().optional(),
+})
+
+// PostgREST's .or() filter uses commas/parentheses as syntax, so strip any
+// characters from a free-text search term that could break the filter.
+export function sanitizeSearch(term: string): string {
+  return term.replace(/[%,()*]/g, " ").trim()
+}

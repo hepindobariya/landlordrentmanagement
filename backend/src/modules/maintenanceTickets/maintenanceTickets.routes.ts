@@ -6,7 +6,7 @@ import { asyncHandler } from "../../utils/asyncHandler"
 import { ApiError } from "../../utils/errors"
 import { assertOwned } from "../../utils/ownership"
 import { sendOk } from "../../utils/response"
-import { idParamSchema, uuidSchema } from "../../utils/validation"
+import { idParamSchema, paginationSchema, uuidSchema } from "../../utils/validation"
 
 const statusEnum = z.enum(["open", "in_progress", "closed"])
 
@@ -20,7 +20,7 @@ const updateStatusSchema = z.object({
   status: statusEnum,
 })
 
-const listQuerySchema = z.object({
+const listQuerySchema = paginationSchema.extend({
   unit_id: uuidSchema.optional(),
   status: statusEnum.optional(),
 })
@@ -47,7 +47,7 @@ maintenanceTicketsRouter.post(
   })
 )
 
-// LIST (optional filters)
+// LIST (optional filters + pagination)
 maintenanceTicketsRouter.get(
   "/",
   asyncHandler(async (req, res) => {
@@ -62,10 +62,14 @@ maintenanceTicketsRouter.get(
     if (q.unit_id) query = query.eq("unit_id", q.unit_id)
     if (q.status) query = query.eq("status", q.status)
 
-    const { data, error } = await query.order("created_at", {
-      ascending: false,
-    })
+    query = query.order("created_at", { ascending: false })
 
+    if (q.limit != null) {
+      const from = q.offset ?? 0
+      query = query.range(from, from + q.limit - 1)
+    }
+
+    const { data, error } = await query
     if (error) throw new ApiError(500, error.message)
     return sendOk(res, data)
   })

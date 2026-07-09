@@ -7,7 +7,12 @@ import { todayISODate } from "../../utils/dates"
 import { ApiError } from "../../utils/errors"
 import { assertOwned } from "../../utils/ownership"
 import { sendOk } from "../../utils/response"
-import { idParamSchema, isoDateSchema, uuidSchema } from "../../utils/validation"
+import {
+  idParamSchema,
+  isoDateSchema,
+  paginationSchema,
+  uuidSchema,
+} from "../../utils/validation"
 
 const billingCycleEnum = z.enum(["weekly", "monthly", "quarterly", "yearly"])
 
@@ -43,7 +48,7 @@ const endSchema = z.object({
   end_date: isoDateSchema.optional(),
 })
 
-const listQuerySchema = z.object({
+const listQuerySchema = paginationSchema.extend({
   unit_id: uuidSchema.optional(),
   tenant_id: uuidSchema.optional(),
   status: z.enum(["active", "ended"]).optional(),
@@ -72,7 +77,7 @@ leasesRouter.post(
   })
 )
 
-// LIST (optional filters)
+// LIST (optional filters + pagination)
 leasesRouter.get(
   "/",
   asyncHandler(async (req, res) => {
@@ -88,10 +93,14 @@ leasesRouter.get(
     if (q.tenant_id) query = query.eq("tenant_id", q.tenant_id)
     if (q.status) query = query.eq("status", q.status)
 
-    const { data, error } = await query.order("created_at", {
-      ascending: false,
-    })
+    query = query.order("created_at", { ascending: false })
 
+    if (q.limit != null) {
+      const from = q.offset ?? 0
+      query = query.range(from, from + q.limit - 1)
+    }
+
+    const { data, error } = await query
     if (error) throw new ApiError(500, error.message)
     return sendOk(res, data)
   })

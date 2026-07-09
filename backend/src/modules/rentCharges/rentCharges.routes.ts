@@ -7,7 +7,12 @@ import { firstDayOfCurrentMonthISO, todayISODate } from "../../utils/dates"
 import { ApiError } from "../../utils/errors"
 import { assertOwned } from "../../utils/ownership"
 import { sendOk } from "../../utils/response"
-import { idParamSchema, isoDateSchema, uuidSchema } from "../../utils/validation"
+import {
+  idParamSchema,
+  isoDateSchema,
+  paginationSchema,
+  uuidSchema,
+} from "../../utils/validation"
 
 const generateSchema = z.object({
   lease_id: uuidSchema,
@@ -16,7 +21,7 @@ const generateSchema = z.object({
   due_date: isoDateSchema.optional(),
 })
 
-const listQuerySchema = z.object({
+const listQuerySchema = paginationSchema.extend({
   lease_id: uuidSchema,
   status: z.enum(["due", "paid", "partial"]).optional(),
 })
@@ -84,7 +89,7 @@ rentChargesRouter.post(
   })
 )
 
-// LIST charges by lease (?lease_id= required, optional &status=)
+// LIST charges by lease (?lease_id= required, optional &status=, pagination)
 rentChargesRouter.get(
   "/",
   asyncHandler(async (req, res) => {
@@ -101,14 +106,21 @@ rentChargesRouter.get(
 
     if (q.status) query = query.eq("status", q.status)
 
-    const { data, error } = await query.order("due_date", { ascending: false })
+    query = query.order("due_date", { ascending: false })
 
+    if (q.limit != null) {
+      const from = q.offset ?? 0
+      query = query.range(from, from + q.limit - 1)
+    }
+
+    const { data, error } = await query
     if (error) throw new ApiError(500, error.message)
     return sendOk(res, data)
   })
 )
 
-// MARK AS PAID (full or partial)
+// MARK AS PAID (full or partial) — legacy quick-pay. For itemized payments
+// with a channel + receipt, use POST /api/v1/payments instead.
 rentChargesRouter.post(
   "/:id/pay",
   asyncHandler(async (req, res) => {

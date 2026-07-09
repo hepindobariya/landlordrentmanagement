@@ -6,7 +6,7 @@ import { asyncHandler } from "../../utils/asyncHandler"
 import { ApiError } from "../../utils/errors"
 import { assertOwned } from "../../utils/ownership"
 import { sendOk } from "../../utils/response"
-import { idParamSchema, uuidSchema } from "../../utils/validation"
+import { idParamSchema, paginationSchema, uuidSchema } from "../../utils/validation"
 
 const createSchema = z.object({
   property_id: uuidSchema,
@@ -28,7 +28,7 @@ const updateSchema = z
     message: "At least one field is required",
   })
 
-const listQuerySchema = z.object({
+const listQuerySchema = paginationSchema.extend({
   property_id: uuidSchema.optional(),
 })
 
@@ -54,7 +54,7 @@ unitsRouter.post(
   })
 )
 
-// LIST (optional ?property_id= filter)
+// LIST (optional ?property_id= filter, ?limit=, ?offset=)
 unitsRouter.get(
   "/",
   asyncHandler(async (req, res) => {
@@ -68,10 +68,14 @@ unitsRouter.get(
 
     if (q.property_id) query = query.eq("property_id", q.property_id)
 
-    const { data, error } = await query.order("created_at", {
-      ascending: false,
-    })
+    query = query.order("created_at", { ascending: false })
 
+    if (q.limit != null) {
+      const from = q.offset ?? 0
+      query = query.range(from, from + q.limit - 1)
+    }
+
+    const { data, error } = await query
     if (error) throw new ApiError(500, error.message)
     return sendOk(res, data)
   })

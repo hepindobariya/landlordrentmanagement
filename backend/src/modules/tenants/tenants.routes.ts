@@ -5,7 +5,11 @@ import { getLandlordId } from "../../middleware/auth"
 import { asyncHandler } from "../../utils/asyncHandler"
 import { ApiError } from "../../utils/errors"
 import { sendOk } from "../../utils/response"
-import { idParamSchema } from "../../utils/validation"
+import {
+  idParamSchema,
+  paginationSchema,
+  sanitizeSearch,
+} from "../../utils/validation"
 
 const createSchema = z.object({
   full_name: z.string().min(1).max(200),
@@ -18,6 +22,10 @@ const updateSchema = createSchema
   .refine((d) => Object.keys(d).length > 0, {
     message: "At least one field is required",
   })
+
+const listQuerySchema = paginationSchema.extend({
+  search: z.string().min(1).max(200).optional(),
+})
 
 export const tenantsRouter = Router()
 
@@ -39,17 +47,35 @@ tenantsRouter.post(
   })
 )
 
-// LIST
+// LIST (optional ?search=, ?limit=, ?offset=)
 tenantsRouter.get(
   "/",
   asyncHandler(async (req, res) => {
     const landlordId = getLandlordId(req)
-    const { data, error } = await supabase
+    const { search, limit, offset } = listQuerySchema.parse(req.query)
+
+    let query = supabase
       .from("tenants")
       .select("*")
       .eq("landlord_id", landlordId)
-      .order("created_at", { ascending: false })
 
+    if (search) {
+      const s = sanitizeSearch(search)
+      if (s) {
+        query = query.or(
+          `full_name.ilike.%${s}%,email.ilike.%${s}%,phone.ilike.%${s}%`
+        )
+      }
+    }
+
+    query = query.order("created_at", { ascending: false })
+
+    if (limit != null) {
+      const from = offset ?? 0
+      query = query.range(from, from + limit - 1)
+    }
+
+    const { data, error } = await query
     if (error) throw new ApiError(500, error.message)
     return sendOk(res, data)
   })

@@ -2,9 +2,11 @@ import { Router } from "express"
 import { requireAuth } from "../middleware/auth"
 import { leasesRouter } from "../modules/leases/leases.routes"
 import { maintenanceTicketsRouter } from "../modules/maintenanceTickets/maintenanceTickets.routes"
+import { paymentsRouter } from "../modules/payments/payments.routes"
 import { profileRouter } from "../modules/profile/profile.routes"
 import { propertiesRouter } from "../modules/properties/properties.routes"
 import { rentChargesRouter } from "../modules/rentCharges/rentCharges.routes"
+import { reportsRouter } from "../modules/reports/reports.routes"
 import { tenantsRouter } from "../modules/tenants/tenants.routes"
 import { unitsRouter } from "../modules/units/units.routes"
 
@@ -19,4 +21,6 @@ apiRouter.use("/units", unitsRouter)
 apiRouter.use("/tenants", tenantsRouter)
 apiRouter.use("/leases", leasesRouter)
 apiRouter.use("/rent-charges", rentChargesRouter)
+apiRouter.use("/payments", paymentsRouter)
 apiRouter.use("/maintenance-tickets", maintenanceTicketsRouter)
+apiRouter.use("/reports", reportsRouter)
