@@ -82,12 +82,21 @@ jobs:
             echo "debug.keystore already exists — reusing it."
           fi
 
-      # 5b) Build the release APK.
-      - name: Build release APK
+      # 5b) Build the release APK — SIZE OPTIMIZED.
+      #     - reactNativeArchitectures=arm64-v8a: build ONLY for modern 64-bit
+      #       phones (drops the other CPU libraries -> much smaller APK).
+      #     - enableProguardInReleaseBuilds: R8 strips unused code.
+      #     - enableShrinkResourcesInReleaseBuilds: removes unused resources.
+      #     (These -P flags are read by the Expo Android template. If a given
+      #      template version ignores them, they simply have no effect.)
+      - name: Build release APK (arm64-v8a only, size-optimized)
         working-directory: mobile/android
         run: |
           chmod +x ./gradlew
-          ./gradlew assembleRelease --no-daemon
+          ./gradlew assembleRelease --no-daemon \
+            -PreactNativeArchitectures=arm64-v8a \
+            -Pandroid.enableProguardInReleaseBuilds=true \
+            -Pandroid.enableShrinkResourcesInReleaseBuilds=true
 
       # 6 + 7 + 8) Find the APK, upload it to Supabase Storage, and record it.
       - name: Upload APK to Supabase and record the release
@@ -101,6 +110,7 @@ jobs:
           # 6) Locate the built APK.
           APK_PATH=$(ls android/app/build/outputs/apk/release/*.apk | head -n 1)
           echo "Found APK: $APK_PATH"
+          echo "APK size:" && du -h "$APK_PATH"
 
           # Unique filename using the git short SHA (first 7 chars).
           SHORT_SHA="${GITHUB_SHA:0:7}"
