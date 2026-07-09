@@ -1,0 +1,140 @@
+name: Build Android APK
+
+# ---------------------------------------------------------------------------
+# When does this run?
+#   - Automatically on every push to "main" that changes something in mobile/
+#   - Manually, anytime, from the GitHub "Actions" tab (workflow_dispatch)
+# ---------------------------------------------------------------------------
+on:
+  push:
+    branches: [main]
+    paths:
+      - "mobile/**"
+  workflow_dispatch:
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1) Get the code.
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2a) Node 18 (with npm caching for faster installs).
+      - name: Set up Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      # 2b) Java 17 (Temurin) — required by Android Gradle. Cache Gradle too.
+      - name: Set up Java 17 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: gradle
+
+      # 3) Install exact dependencies from package-lock.json.
+      - name: Install dependencies
+        working-directory: mobile
+        run: npm ci
+
+      # 3.5) Recreate the .env the app needs at BUILD time.
+      #      EXPO_PUBLIC_* values get baked into the JS bundle during the
+      #      release build, so they must be present now. These are the same
+      #      public values from your local mobile/.env (safe to ship).
+      - name: Create mobile/.env from secrets
+        working-directory: mobile
+        run: |
+          echo "EXPO_PUBLIC_SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> .env
+          echo "EXPO_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}" >> .env
+          echo "EXPO_PUBLIC_API_URL=${{ secrets.EXPO_PUBLIC_API_URL }}" >> .env
+
+      # 4) Generate the native android/ project from your Expo config.
+      #    --no-install: we already ran npm ci, so skip reinstalling.
+      - name: Generate native Android project (Expo prebuild)
+        working-directory: mobile
+        run: npx expo prebuild --platform android --no-install
+
+      # 5a) Make sure a debug keystore exists so the release APK is SIGNED
+      #     and therefore installable by sideloading. The Expo/RN template
+      #     signs "release" with this debug key by default — no Play Store
+      #     signing needed. We create it only if it isn't already there.
+      - name: Ensure a debug keystore exists
+        working-directory: mobile/android/app
+        run: |
+          if [ ! -f debug.keystore ]; then
+            echo "Generating a debug keystore..."
+            keytool -genkeypair -v \
+              -keystore debug.keystore \
+              -storepass android \
+              -keypass android \
+              -alias androiddebugkey \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -dname "CN=Android Debug,O=Android,C=US"
+          else
+            echo "debug.keystore already exists — reusing it."
+          fi
+
+      # 5b) Build the release APK.
+      - name: Build release APK
+        working-directory: mobile/android
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleRelease --no-daemon
+
+      # 6 + 7 + 8) Find the APK, upload it to Supabase Storage, and record it.
+      - name: Upload APK to Supabase and record the release
+        working-directory: mobile
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          set -euo pipefail
+
+          # 6) Locate the built APK.
+          APK_PATH=$(ls android/app/build/outputs/apk/release/*.apk | head -n 1)
+          echo "Found APK: $APK_PATH"
+
+          # Unique filename using the git short SHA (first 7 chars).
+          SHORT_SHA="${GITHUB_SHA:0:7}"
+          FILENAME="landlord-rent-${SHORT_SHA}.apk"
+          echo "Uploading as: $FILENAME"
+
+          # 7) Upload to the "app-builds" storage bucket via the Storage REST
+          #    API. x-upsert:true overwrites if the same name ever repeats.
+          curl -sS --fail-with-body -X POST \
+            "${SUPABASE_URL}/storage/v1/object/app-builds/${FILENAME}" \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -H "x-upsert: true" \
+            -H "Content-Type: application/vnd.android.package-archive" \
+            --data-binary "@${APK_PATH}"
+
+          # The public download URL (the "app-builds" bucket must be Public).
+          APK_URL="${SUPABASE_URL}/storage/v1/object/public/app-builds/${FILENAME}"
+          echo "Public APK URL: $APK_URL"
+
+          # 8) Insert a row into app_releases via the PostgREST API. Your
+          #    /download page reads the newest row and shows the QR + button.
+          curl -sS --fail-with-body -X POST \
+            "${SUPABASE_URL}/rest/v1/app_releases" \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: return=minimal" \
+            -d "{\"platform\":\"android\",\"build_id\":\"${SHORT_SHA}\",\"apk_url\":\"${APK_URL}\"}"
+
+          echo "✅ Uploaded APK and recorded release ${SHORT_SHA}."
+
+      # (Optional but handy) Also attach the APK to the workflow run so you
+      # can download it straight from the Actions tab as a backup.
+      - name: Attach APK to the workflow run
+        uses: actions/upload-artifact@v4
+        with:
+          name: landlord-rent-android
+          path: mobile/android/app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
