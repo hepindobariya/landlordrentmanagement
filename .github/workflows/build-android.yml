@@ -85,18 +85,14 @@ jobs:
       # 5b) Build the release APK — SIZE OPTIMIZED.
       #     - reactNativeArchitectures=arm64-v8a: build ONLY for modern 64-bit
       #       phones (drops the other CPU libraries -> much smaller APK).
-      #     - enableProguardInReleaseBuilds: R8 strips unused code.
-      #     - enableShrinkResourcesInReleaseBuilds: removes unused resources.
-      #     (These -P flags are read by the Expo Android template. If a given
-      #      template version ignores them, they simply have no effect.)
+      #     (We omit Proguard and resource shrinking flags as they require additional
+      #      customizations in the generated build.gradle to avoid compilation errors.)
       - name: Build release APK (arm64-v8a only, size-optimized)
         working-directory: mobile/android
         run: |
           chmod +x ./gradlew
           ./gradlew assembleRelease --no-daemon \
-            -PreactNativeArchitectures=arm64-v8a \
-            -Pandroid.enableProguardInReleaseBuilds=true \
-            -Pandroid.enableShrinkResourcesInReleaseBuilds=true
+            -PreactNativeArchitectures=arm64-v8a
 
       # 6 + 7 + 8) Find the APK, upload it to Supabase Storage, and record it.
       - name: Upload APK to Supabase and record the release
