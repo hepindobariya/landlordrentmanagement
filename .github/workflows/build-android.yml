@@ -36,14 +36,14 @@ jobs:
 
       # 3.5) Recreate the .env the app needs at BUILD time.
       #      EXPO_PUBLIC_* values get baked into the JS bundle during the
-      #      release build, so they must be present now. These are the same
-      #      public values from your local mobile/.env (safe to ship).
-      - name: Create mobile/.env from secrets
+      #      release build, so they must be present now. These are client-side
+      #      public values that match your environment (already inside eas.json).
+      - name: Create mobile/.env
         working-directory: mobile
         run: |
-          echo "EXPO_PUBLIC_SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> .env
-          echo "EXPO_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}" >> .env
-          echo "EXPO_PUBLIC_API_URL=${{ secrets.EXPO_PUBLIC_API_URL }}" >> .env
+          echo "EXPO_PUBLIC_SUPABASE_URL=https://edzbzumkyptgpycwdybb.supabase.co" >> .env
+          echo "EXPO_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVkemJ6dW1reXB0Z3B5Y3dkeWJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM0MzIzMzQsImV4cCI6MjA5OTAwODMzNH0.ykkdfJO2kLfpIzFqX4qDAqME4wkmfuf8CtQfNBoWQkg" >> .env
+          echo "EXPO_PUBLIC_API_URL=https://landlordrentmanagement.onrender.com" >> .env
 
       # 4) Generate the native android/ project from your Expo config.
       #    --no-install: we already ran npm ci, so skip reinstalling.
