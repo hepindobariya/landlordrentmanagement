@@ -21,21 +21,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2a) Node 18 (with npm caching for faster installs).
+      # 2) Node 18 (with npm caching for faster installs).
       - name: Set up Node.js 18
         uses: actions/setup-node@v4
         with:
           node-version: 18
           cache: npm
           cache-dependency-path: mobile/package-lock.json
-
-      # 2b) Java 17 (Temurin) — required by Android Gradle. Cache Gradle too.
-      - name: Set up Java 17 (Temurin)
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 17
-          cache: gradle
 
       # 3) Install exact dependencies from package-lock.json.
       - name: Install dependencies
@@ -55,9 +47,20 @@ jobs:
 
       # 4) Generate the native android/ project from your Expo config.
       #    --no-install: we already ran npm ci, so skip reinstalling.
+      #    We run this BEFORE setting up Java so that the android/ build files exist
+      #    and actions/setup-java can successfully cache Gradle dependencies.
       - name: Generate native Android project (Expo prebuild)
         working-directory: mobile
         run: npx expo prebuild --platform android --no-install
+
+      # 5) Java 17 (Temurin) — required by Android Gradle.
+      #    We run this after Expo prebuild so the matching Gradle cache files are present.
+      - name: Set up Java 17 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: gradle
 
       # 5a) Make sure a debug keystore exists so the release APK is SIGNED
       #     and therefore installable by sideloading. The Expo/RN template
