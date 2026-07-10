@@ -16,6 +16,9 @@ import {
 } from "../../utils/validation"
 
 const billingCycleEnum = z.enum(["weekly", "monthly", "quarterly", "yearly"])
+// prepaid  = rent collected in advance for the current / coming period
+// postpaid = rent collected in arrears for the previous period
+const billingModeEnum = z.enum(["prepaid", "postpaid"])
 
 const createSchema = z
   .object({
@@ -27,6 +30,7 @@ const createSchema = z
     start_date: isoDateSchema,
     end_date: isoDateSchema.optional(),
     billing_cycle: billingCycleEnum.default("monthly"),
+    billing_mode: billingModeEnum.default("prepaid"),
   })
   .refine((d) => !d.end_date || d.end_date >= d.start_date, {
     message: "end_date must be on or after start_date",
@@ -40,6 +44,7 @@ const updateSchema = z
     start_date: isoDateSchema.optional(),
     end_date: isoDateSchema.nullable().optional(),
     billing_cycle: billingCycleEnum.optional(),
+    billing_mode: billingModeEnum.optional(),
     status: z.enum(["active", "ended"]).optional(),
   })
   .refine((d) => Object.keys(d).length > 0, {

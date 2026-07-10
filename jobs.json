@@ -1,0 +1,169 @@
+{
+  "total_count": 1,
+  "jobs": [
+    {
+      "id": 86396858665,
+      "run_id": 29103147976,
+      "workflow_name": "Build Android APK",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/hepindobariya/landlordrentmanagement/actions/runs/29103147976",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOTPmLj88AAAAUHadxKQ",
+      "head_sha": "a5468cc8c000ace768ec01e8e6d68b4ef05cad1b",
+      "url": "https://api.github.com/repos/hepindobariya/landlordrentmanagement/actions/jobs/86396858665",
+      "html_url": "https://github.com/hepindobariya/landlordrentmanagement/actions/runs/29103147976/job/86396858665",
+      "status": "completed",
+      "conclusion": "failure",
+      "created_at": "2026-07-10T15:18:14Z",
+      "started_at": "2026-07-10T15:18:17Z",
+      "completed_at": "2026-07-10T15:23:40Z",
+      "name": "build-android",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-07-10T15:18:18Z",
+          "completed_at": "2026-07-10T15:18:19Z"
+        },
+        {
+          "name": "Checkout repository",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-07-10T15:18:19Z",
+          "completed_at": "2026-07-10T15:18:21Z"
+        },
+        {
+          "name": "Set up Node.js 20",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-07-10T15:18:21Z",
+          "completed_at": "2026-07-10T15:18:25Z"
+        },
+        {
+          "name": "Create mobile/.env from secrets",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-07-10T15:18:25Z",
+          "completed_at": "2026-07-10T15:18:25Z"
+        },
+        {
+          "name": "Install dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-07-10T15:18:25Z",
+          "completed_at": "2026-07-10T15:18:37Z"
+        },
+        {
+          "name": "Generate native Android project (Expo prebuild)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-07-10T15:18:37Z",
+          "completed_at": "2026-07-10T15:18:39Z"
+        },
+        {
+          "name": "Bind APK to the \"preview\" EAS Update channel",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-07-10T15:18:39Z",
+          "completed_at": "2026-07-10T15:18:40Z"
+        },
+        {
+          "name": "Increase Gradle & Kotlin memory (fix KSP Metaspace OOM)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-07-10T15:18:40Z",
+          "completed_at": "2026-07-10T15:18:40Z"
+        },
+        {
+          "name": "Set up Java 17 (Temurin)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-07-10T15:18:40Z",
+          "completed_at": "2026-07-10T15:18:59Z"
+        },
+        {
+          "name": "Ensure a debug keystore exists",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10,
+          "started_at": "2026-07-10T15:18:59Z",
+          "completed_at": "2026-07-10T15:18:59Z"
+        },
+        {
+          "name": "Build release APK (arm64-v8a only)",
+          "status": "completed",
+          "conclusion": "failure",
+          "number": 11,
+          "started_at": "2026-07-10T15:18:59Z",
+          "completed_at": "2026-07-10T15:23:37Z"
+        },
+        {
+          "name": "Upload APK to Supabase and record the release",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 12,
+          "started_at": "2026-07-10T15:23:37Z",
+          "completed_at": "2026-07-10T15:23:37Z"
+        },
+        {
+          "name": "Attach APK to the workflow run",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 13,
+          "started_at": "2026-07-10T15:23:37Z",
+          "completed_at": "2026-07-10T15:23:37Z"
+        },
+        {
+          "name": "Post Set up Java 17 (Temurin)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 24,
+          "started_at": "2026-07-10T15:23:37Z",
+          "completed_at": "2026-07-10T15:23:37Z"
+        },
+        {
+          "name": "Post Set up Node.js 20",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 25,
+          "started_at": "2026-07-10T15:23:37Z",
+          "completed_at": "2026-07-10T15:23:37Z"
+        },
+        {
+          "name": "Post Checkout repository",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 26,
+          "started_at": "2026-07-10T15:23:37Z",
+          "completed_at": "2026-07-10T15:23:37Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 27,
+          "started_at": "2026-07-10T15:23:37Z",
+          "completed_at": "2026-07-10T15:23:37Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/hepindobariya/landlordrentmanagement/check-runs/86396858665",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runner_id": 1000000010,
+      "runner_name": "GitHub Actions 1000000010",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    }
+  ]
+}

@@ -9,14 +9,34 @@ import {
   View,
 } from "react-native"
 import { AppButton, CenteredMessage, ErrorText, Field } from "../components/ui"
+import { DatePickerField } from "../components/DatePickerField"
 import { apiFetch } from "../lib/api"
 import type { RootStackParamList } from "../navigation/AppNavigator"
 import { colors, spacing } from "../theme"
-import type { BillingCycle, Lease, Tenant, Unit } from "../types"
+import type {
+  BillingCycle,
+  BillingMode,
+  Lease,
+  Tenant,
+  Unit,
+} from "../types"
 
 type Props = NativeStackScreenProps<RootStackParamList, "LeaseForm">
 
 const CYCLES: BillingCycle[] = ["weekly", "monthly", "quarterly", "yearly"]
+
+const MODES: { value: BillingMode; label: string; hint: string }[] = [
+  {
+    value: "prepaid",
+    label: "Pre-paid",
+    hint: "Rent collected in advance for the current period.",
+  },
+  {
+    value: "postpaid",
+    label: "Post-paid",
+    hint: "Rent collected in arrears for the previous period.",
+  },
+]
 
 export default function LeaseFormScreen({ route, navigation }: Props) {
   const leaseId = route.params?.leaseId
@@ -31,6 +51,7 @@ export default function LeaseFormScreen({ route, navigation }: Props) {
   const [startDate, setStartDate] = useState("")
   const [endDate, setEndDate] = useState("")
   const [cycle, setCycle] = useState<BillingCycle>("monthly")
+  const [mode, setMode] = useState<BillingMode>("prepaid")
   const [status, setStatus] = useState<"active" | "ended">("active")
 
   const [loading, setLoading] = useState(true)
@@ -56,6 +77,7 @@ export default function LeaseFormScreen({ route, navigation }: Props) {
           setStartDate(lease.start_date)
           setEndDate(lease.end_date ?? "")
           setCycle(lease.billing_cycle)
+          setMode(lease.billing_mode ?? "prepaid")
           setStatus(lease.status)
         } else {
           const [unitList, tenantList] = await Promise.all([
@@ -107,6 +129,7 @@ export default function LeaseFormScreen({ route, navigation }: Props) {
           rent_amount: rentNum,
           deposit: depositNum,
           billing_cycle: cycle,
+          billing_mode: mode,
           status,
         }
         if (validDate(startDate.trim())) payload.start_date = startDate.trim()
@@ -138,6 +161,7 @@ export default function LeaseFormScreen({ route, navigation }: Props) {
           deposit: depositNum,
           start_date: startDate.trim(),
           billing_cycle: cycle,
+          billing_mode: mode,
         }
         if (endDate.trim()) payload.end_date = endDate.trim()
         await apiFetch<Lease>("/api/v1/leases", {
@@ -182,6 +206,7 @@ export default function LeaseFormScreen({ route, navigation }: Props) {
   if (loading) return <CenteredMessage loading text="Loading…" />
 
   const busy = saving || ending
+  const activeMode = MODES.find((m) => m.value === mode)
 
   return (
     <ScrollView
@@ -294,20 +319,46 @@ export default function LeaseFormScreen({ route, navigation }: Props) {
         })}
       </View>
 
+      <Text style={styles.fieldLabel}>Rent preference</Text>
+      <View style={styles.pillRow}>
+        {MODES.map((m) => {
+          const selected = mode === m.value
+          return (
+            <TouchableOpacity
+              key={m.value}
+              style={[styles.pill, selected ? styles.pillSelected : null]}
+              onPress={() => setMode(m.value)}
+              activeOpacity={0.8}
+            >
+              <Text
+                style={[
+                  styles.pillText,
+                  selected ? styles.pillTextSelected : null,
+                ]}
+              >
+                {m.label}
+              </Text>
+            </TouchableOpacity>
+          )
+        })}
+      </View>
+      {activeMode ? (
+        <Text style={styles.modeHint}>{activeMode.hint}</Text>
+      ) : null}
+
       <View style={styles.spacerSm} />
-      <Field
+      <DatePickerField
         label={isEdit ? "Start date" : "Start date *"}
         value={startDate}
-        onChangeText={setStartDate}
-        placeholder="YYYY-MM-DD"
+        onChange={setStartDate}
         editable={!busy}
       />
-      <Field
+      <DatePickerField
         label="End date (optional)"
         value={endDate}
-        onChangeText={setEndDate}
-        placeholder="YYYY-MM-DD"
+        onChange={setEndDate}
         editable={!busy}
+        optional
       />
 
       {isEdit ? (
@@ -373,6 +424,12 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   helper: { fontSize: 14, color: colors.muted, marginBottom: spacing.md },
+  modeHint: {
+    fontSize: 13,
+    color: colors.muted,
+    marginTop: -spacing.sm,
+    marginBottom: spacing.md,
+  },
   selectWrap: { marginBottom: spacing.md },
   option: {
     backgroundColor: colors.card,
@@ -384,7 +441,7 @@ const styles = StyleSheet.create({
   },
   optionSelected: {
     borderColor: colors.primary,
-    backgroundColor: "#EFF4FF",
+    backgroundColor: colors.primaryTint,
   },
   optionText: { fontSize: 15, color: colors.text },
   optionTextSelected: { color: colors.primaryDark, fontWeight: "700" },

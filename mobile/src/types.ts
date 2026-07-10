@@ -3,11 +3,25 @@
 // money-ish fields are typed `number | string` and should be run through
 // Number()/formatMoney() before display or math.
 
+export type PropertyType = "residential" | "commercial"
+export type Furnishing = "unfurnished" | "semi_furnished" | "furnished"
+
 export type Property = {
   id: string
   landlord_id: string
   name: string
   address: string | null
+  // Batch 1 metadata (all optional / nullable).
+  property_type: PropertyType | null
+  furnishing: Furnishing | null
+  maps_link: string | null
+  floors: number | null
+  area_sqft: number | string | null
+  amenities: string | null
+  owner_name: string | null
+  owner_phone: string | null
+  owner_email: string | null
+  owner_pan: string | null
   created_at: string
 }
 
@@ -32,6 +46,7 @@ export type Tenant = {
 }
 
 export type BillingCycle = "weekly" | "monthly" | "quarterly" | "yearly"
+export type BillingMode = "prepaid" | "postpaid"
 export type LeaseStatus = "active" | "ended"
 
 export type Lease = {
@@ -44,6 +59,7 @@ export type Lease = {
   start_date: string
   end_date: string | null
   billing_cycle: BillingCycle
+  billing_mode: BillingMode
   status: LeaseStatus
   created_at: string
 }

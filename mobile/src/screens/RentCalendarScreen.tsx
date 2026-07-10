@@ -11,7 +11,7 @@ import {
 } from "react-native"
 import { CenteredMessage } from "../components/ui"
 import { apiFetch } from "../lib/api"
-import { formatMoney } from "../lib/format"
+import { formatMoney, formatMoneyCompact } from "../lib/format"
 import type { RootStackParamList } from "../navigation/AppNavigator"
 import { colors, font, radius, shadow, spacing } from "../theme"
 import type { CalendarCharge } from "../types"
@@ -112,13 +112,13 @@ export default function RentCalendarScreen({ navigation }: Props) {
         <View style={styles.summaryTile}>
           <Text style={styles.summaryLabel}>Collected</Text>
           <Text style={[styles.summaryValue, styles.collectedText]}>
-            {formatMoney(collected)}
+            {formatMoneyCompact(collected)}
           </Text>
         </View>
         <View style={styles.summaryTile}>
           <Text style={styles.summaryLabel}>Outstanding</Text>
           <Text style={[styles.summaryValue, styles.outstandingText]}>
-            {formatMoney(outstanding)}
+            {formatMoneyCompact(outstanding)}
           </Text>
         </View>
       </View>

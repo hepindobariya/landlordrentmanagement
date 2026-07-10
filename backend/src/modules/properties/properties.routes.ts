@@ -11,9 +11,34 @@ import {
   sanitizeSearch,
 } from "../../utils/validation"
 
+const propertyTypeEnum = z.enum(["residential", "commercial"])
+const furnishingEnum = z.enum(["unfurnished", "semi_furnished", "furnished"])
+
+// Optional, nullable metadata (RentGet-inspired). Every field is optional so
+// older clients that only send name/address keep working unchanged; passing
+// null explicitly clears a field on update.
+const metadataShape = {
+  property_type: propertyTypeEnum.nullable().optional(),
+  furnishing: furnishingEnum.nullable().optional(),
+  maps_link: z.string().max(500).nullable().optional(),
+  floors: z.coerce.number().int().min(0).max(1000).nullable().optional(),
+  area_sqft: z.coerce.number().min(0).max(100000000).nullable().optional(),
+  amenities: z.string().max(2000).nullable().optional(),
+  owner_name: z.string().max(200).nullable().optional(),
+  owner_phone: z.string().max(40).nullable().optional(),
+  owner_email: z
+    .string()
+    .email("Enter a valid email")
+    .max(200)
+    .nullable()
+    .optional(),
+  owner_pan: z.string().max(20).nullable().optional(),
+}
+
 const createSchema = z.object({
   name: z.string().min(1).max(200),
-  address: z.string().max(500).optional(),
+  address: z.string().max(500).nullable().optional(),
+  ...metadataShape,
 })
 
 const updateSchema = createSchema

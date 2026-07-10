@@ -12,7 +12,7 @@ import {
 } from "react-native"
 import { CenteredMessage } from "../components/ui"
 import { apiFetch } from "../lib/api"
-import { formatMoney } from "../lib/format"
+import { formatMoney, formatMoneyCompact } from "../lib/format"
 import { supabase } from "../lib/supabase"
 import type { RootStackParamList } from "../navigation/AppNavigator"
 import { colors, font, radius, shadow, spacing } from "../theme"
@@ -114,12 +114,12 @@ export default function HomeScreen({ navigation }: Props) {
           <View style={styles.hero}>
             <View style={styles.heroGlow} />
             <Text style={styles.heroLabel}>Collected this month</Text>
-            <Text style={styles.heroValue}>{formatMoney(collected)}</Text>
+            <Text style={styles.heroValue}>{formatMoneyCompact(collected)}</Text>
             <View style={styles.progressTrack}>
               <View style={progressStyle} />
             </View>
             <Text style={styles.heroSub}>
-              {pct}% of {formatMoney(expected)} expected
+              {pct}% of {formatMoneyCompact(expected)} expected
             </Text>
           </View>
 
@@ -127,7 +127,7 @@ export default function HomeScreen({ navigation }: Props) {
             <StatTile
               icon="trending-down"
               label="Outstanding"
-              value={formatMoney(summary.outstanding_total)}
+              value={formatMoneyCompact(summary.outstanding_total)}
               bg={colors.dangerBg}
               fg={colors.danger}
             />
@@ -169,7 +169,7 @@ export default function HomeScreen({ navigation }: Props) {
                         {row.property_name}
                       </Text>
                       <Text style={styles.obpAmount}>
-                        {formatMoney(row.outstanding)}
+                        {formatMoneyCompact(row.outstanding)}
                       </Text>
                     </View>
                   )

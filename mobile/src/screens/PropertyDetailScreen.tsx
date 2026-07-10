@@ -3,6 +3,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack"
 import React, { useCallback, useLayoutEffect, useState } from "react"
 import {
   FlatList,
+  Linking,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -15,6 +16,25 @@ import { colors, spacing } from "../theme"
 import type { Property, Unit } from "../types"
 
 type Props = NativeStackScreenProps<RootStackParamList, "PropertyDetail">
+
+const TYPE_LABELS: Record<string, string> = {
+  residential: "Residential",
+  commercial: "Commercial",
+}
+const FURNISHING_LABELS: Record<string, string> = {
+  unfurnished: "Unfurnished",
+  semi_furnished: "Semi-furnished",
+  furnished: "Furnished",
+}
+
+function DetailRow({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.detailRow}>
+      <Text style={styles.detailLabel}>{label}</Text>
+      <Text style={styles.detailValue}>{value}</Text>
+    </View>
+  )
+}
 
 export default function PropertyDetailScreen({ route, navigation }: Props) {
   const { propertyId } = route.params
@@ -73,6 +93,19 @@ export default function PropertyDetailScreen({ route, navigation }: Props) {
     )
   if (!property) return <CenteredMessage text="Property not found." />
 
+  const hasSpecs =
+    property.property_type != null ||
+    property.furnishing != null ||
+    property.floors != null ||
+    property.area_sqft != null ||
+    (property.amenities != null && property.amenities.trim() !== "")
+
+  const hasOwner =
+    property.owner_name != null ||
+    property.owner_phone != null ||
+    property.owner_email != null ||
+    property.owner_pan != null
+
   return (
     <FlatList
       data={units}
@@ -85,6 +118,69 @@ export default function PropertyDetailScreen({ route, navigation }: Props) {
             <Text style={styles.propertyAddress}>
               {property.address ?? "No address on file"}
             </Text>
+
+            {hasSpecs ? (
+              <View style={styles.detailBlock}>
+                {property.property_type ? (
+                  <DetailRow
+                    label="Type"
+                    value={
+                      TYPE_LABELS[property.property_type] ??
+                      property.property_type
+                    }
+                  />
+                ) : null}
+                {property.furnishing ? (
+                  <DetailRow
+                    label="Furnishing"
+                    value={
+                      FURNISHING_LABELS[property.furnishing] ??
+                      property.furnishing
+                    }
+                  />
+                ) : null}
+                {property.floors != null ? (
+                  <DetailRow label="Floors" value={String(property.floors)} />
+                ) : null}
+                {property.area_sqft != null ? (
+                  <DetailRow
+                    label="Area"
+                    value={`${Number(property.area_sqft)} sq.ft`}
+                  />
+                ) : null}
+                {property.amenities ? (
+                  <DetailRow label="Amenities" value={property.amenities} />
+                ) : null}
+              </View>
+            ) : null}
+
+            {property.maps_link ? (
+              <TouchableOpacity
+                onPress={() => Linking.openURL(property.maps_link as string)}
+                activeOpacity={0.7}
+                style={styles.mapsBtn}
+              >
+                <Text style={styles.mapsText}>Open in Google Maps</Text>
+              </TouchableOpacity>
+            ) : null}
+
+            {hasOwner ? (
+              <View style={styles.detailBlock}>
+                <Text style={styles.ownerHeading}>Owner</Text>
+                {property.owner_name ? (
+                  <DetailRow label="Name" value={property.owner_name} />
+                ) : null}
+                {property.owner_phone ? (
+                  <DetailRow label="Phone" value={property.owner_phone} />
+                ) : null}
+                {property.owner_email ? (
+                  <DetailRow label="Email" value={property.owner_email} />
+                ) : null}
+                {property.owner_pan ? (
+                  <DetailRow label="PAN" value={property.owner_pan} />
+                ) : null}
+              </View>
+            ) : null}
           </View>
 
           <Text style={styles.sectionTitle}>Units</Text>
@@ -136,6 +232,44 @@ const styles = StyleSheet.create({
   },
   propertyName: { fontSize: 20, fontWeight: "700", color: colors.text },
   propertyAddress: { fontSize: 15, color: colors.muted, marginTop: spacing.xs },
+  detailBlock: {
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  detailRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: spacing.sm,
+    gap: spacing.md,
+  },
+  detailLabel: { fontSize: 14, color: colors.muted, fontWeight: "600" },
+  detailValue: {
+    fontSize: 14,
+    color: colors.text,
+    fontWeight: "600",
+    flexShrink: 1,
+    textAlign: "right",
+  },
+  ownerHeading: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: colors.subtle,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: spacing.sm,
+  },
+  mapsBtn: {
+    marginTop: spacing.md,
+    alignSelf: "flex-start",
+    backgroundColor: colors.primaryTint,
+    borderRadius: 999,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  mapsText: { color: colors.primaryDark, fontWeight: "700", fontSize: 13 },
   sectionTitle: {
     fontSize: 16,
     fontWeight: "700",

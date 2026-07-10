@@ -2,6 +2,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack"
 import React, { useEffect, useLayoutEffect, useState } from "react"
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native"
 import { AppButton, CenteredMessage, ErrorText, Field } from "../components/ui"
+import { DatePickerField } from "../components/DatePickerField"
 import { apiFetch } from "../lib/api"
 import { formatMoney } from "../lib/format"
 import type { RootStackParamList } from "../navigation/AppNavigator"
@@ -167,11 +168,10 @@ export default function RentCollectScreen({ route, navigation }: Props) {
       </View>
 
       <View style={styles.spacerSm} />
-      <Field
+      <DatePickerField
         label="Paid date"
         value={paidDate}
-        onChangeText={setPaidDate}
-        placeholder="YYYY-MM-DD"
+        onChange={setPaidDate}
         editable={!saving}
       />
       <Field
