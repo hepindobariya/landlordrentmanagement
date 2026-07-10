@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "mobile/**"
+      - ".github/workflows/**"
   workflow_dispatch:
 
 jobs:
@@ -45,6 +46,20 @@ jobs:
       - name: Bind APK to the "preview" EAS Update channel
         working-directory: mobile
         run: node scripts/set-update-channel.js preview
+
+      # expo-updates pulls in Kotlin annotation processing (KSP), which needs
+      # more Metaspace than the default. Bump memory so kspReleaseKotlin and the
+      # lint tasks don't hit java.lang.OutOfMemoryError on the free runner.
+      - name: Increase Gradle & Kotlin memory (fix KSP Metaspace OOM)
+        working-directory: mobile
+        run: |
+          {
+            echo ""
+            echo "org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=2048m -Dfile.encoding=UTF-8"
+            echo "kotlin.compiler.execution.strategy=in-process"
+          } >> android/gradle.properties
+          echo "----- gradle.properties tail -----"
+          tail -n 15 android/gradle.properties
 
       - name: Set up Java 17 (Temurin)
         uses: actions/setup-java@v4
