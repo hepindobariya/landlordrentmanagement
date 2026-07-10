@@ -4,10 +4,10 @@ import {
   Platform,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native"
+import { formatDate } from "../lib/format"
 import { colors, spacing } from "../theme"
 
 type DateFieldProps = {
@@ -16,63 +16,55 @@ type DateFieldProps = {
   onChangeText: (text: string) => void
   error?: string
   editable?: boolean
+  placeholder?: string
 }
 
-// Auto-insert hyphens while typing: 20260710 -> 2026-07-10 (2026 -> 2026-).
-function autoHyphenate(input: string): string {
-  const digits = input.replace(/\D/g, "").slice(0, 8) // YYYYMMDD
-  let out = digits.slice(0, 4)
-  if (digits.length >= 4) out += "-"
-  out += digits.slice(4, 6)
-  if (digits.length >= 6) out += "-"
-  out += digits.slice(6, 8)
-  return out
-}
+const ISO_RE = /^\d{4}-\d{2}-\d{2}$/
 
+// Tap-to-open date picker. Displays the value as "DD MMM YYYY" but always
+// stores/returns an ISO "YYYY-MM-DD" string. No manual typing.
 export function DateField({
   label,
   value,
   onChangeText,
   error,
   editable = true,
+  placeholder = "Select date",
 }: DateFieldProps) {
   const [show, setShow] = useState(false)
 
-  const maybe = /^\d{4}-\d{2}-\d{2}$/.test(value) ? new Date(value) : new Date()
-  const initialDate = isNaN(maybe.getTime()) ? new Date() : maybe
+  const hasValue = ISO_RE.test(value)
+  const parsed = hasValue ? new Date(`${value}T00:00:00`) : new Date()
+  const initialDate = isNaN(parsed.getTime()) ? new Date() : parsed
 
   function onPickerChange(event: { type?: string }, selected?: Date) {
-    setShow(false) // Android auto-dismisses; hide either way.
-    if (event?.type === "dismissed" || !selected) return
+    // Android dismisses itself; hide either way.
+    if (Platform.OS !== "ios") setShow(false)
+    if (event?.type === "dismissed" || !selected) {
+      setShow(false)
+      return
+    }
     const yyyy = selected.getFullYear()
     const mm = String(selected.getMonth() + 1).padStart(2, "0")
     const dd = String(selected.getDate()).padStart(2, "0")
     onChangeText(`${yyyy}-${mm}-${dd}`)
+    if (Platform.OS === "ios") setShow(false)
   }
 
   return (
     <View style={styles.field}>
       <Text style={styles.label}>{label}</Text>
-      <View style={[styles.row, error ? styles.rowError : null]}>
-        <TextInput
-          style={styles.input}
-          value={value}
-          onChangeText={(t) => onChangeText(autoHyphenate(t))}
-          placeholder="Select date"
-          placeholderTextColor={colors.muted}
-          keyboardType="number-pad"
-          editable={editable}
-          maxLength={10}
-        />
-        <TouchableOpacity
-          style={styles.calendarBtn}
-          onPress={() => setShow(true)}
-          disabled={!editable}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.calendarIcon}>📅</Text>
-        </TouchableOpacity>
-      </View>
+      <TouchableOpacity
+        style={[styles.input, error ? styles.inputError : null]}
+        onPress={() => editable && setShow(true)}
+        activeOpacity={0.7}
+        disabled={!editable}
+      >
+        <Text style={hasValue ? styles.valueText : styles.placeholderText}>
+          {hasValue ? formatDate(value) : placeholder}
+        </Text>
+        <Text style={styles.calendarIcon}>📅</Text>
+      </TouchableOpacity>
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
       {show ? (
         <DateTimePicker
@@ -94,23 +86,20 @@ const styles = StyleSheet.create({
     color: colors.text,
     marginBottom: spacing.xs,
   },
-  row: {
+  input: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
     backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 10,
-  },
-  rowError: { borderColor: colors.danger },
-  input: {
-    flex: 1,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
-    fontSize: 16,
-    color: colors.text,
   },
-  calendarBtn: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
-  calendarIcon: { fontSize: 20 },
+  inputError: { borderColor: colors.danger },
+  valueText: { fontSize: 16, color: colors.text },
+  placeholderText: { fontSize: 16, color: colors.muted },
+  calendarIcon: { fontSize: 18, marginLeft: spacing.sm },
   errorText: { color: colors.danger, fontSize: 13, marginTop: spacing.xs },
 })

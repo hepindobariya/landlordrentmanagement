@@ -10,6 +10,7 @@ import {
   paginationSchema,
   sanitizeSearch,
 } from "../../utils/validation"
+import { esc, notifyAsync } from "../notifications/notify.service"
 
 const createSchema = z.object({
   full_name: z.string().min(1).max(200),
@@ -43,6 +44,15 @@ tenantsRouter.post(
       .single()
 
     if (error) throw new ApiError(500, error.message)
+
+    // EVENT notification (fire-and-forget) — new tenant / occupancy change.
+    notifyAsync({
+      landlordId,
+      type: "tenant_change",
+      title: "👤 New tenant added",
+      body: `<b>${esc(body.full_name)}</b> was added to your tenants.`,
+    })
+
     return sendOk(res, data, 201)
   })
 )

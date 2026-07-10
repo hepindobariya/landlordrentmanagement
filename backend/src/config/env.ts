@@ -22,6 +22,11 @@ const envSchema = z.object({
   // "this month" reporting). Defaults to India time so an IST landlord never
   // sees off-by-one dates from UTC drift after midnight local time.
   APP_TIMEZONE: z.string().min(1).default("Asia/Kolkata"),
+  // Telegram notifications (Stage 4). Optional so the server still boots before
+  // they're set; notification sends are skipped/logged when missing.
+  TELEGRAM_BOT_TOKEN: z.string().min(1).optional(),
+  TELEGRAM_BOT_USERNAME: z.string().min(1).optional(),
+  NOTIFICATIONS_CRON_SECRET: z.string().min(1).optional(),
 })
 
 const parsed = envSchema.safeParse(process.env)

@@ -1,6 +1,7 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack"
 import React, { useEffect, useLayoutEffect, useState } from "react"
-import { Alert, ScrollView, StyleSheet, View } from "react-native"
+import { Alert, StyleSheet, View } from "react-native"
+import { FormScreen } from "../components/FormScreen"
 import { AppButton, CenteredMessage, ErrorText, Field } from "../components/ui"
 import { apiFetch } from "../lib/api"
 import type { RootStackParamList } from "../navigation/AppNavigator"
@@ -139,10 +140,7 @@ export default function UnitFormScreen({ route, navigation }: Props) {
   if (loading) return <CenteredMessage loading text="Loading…" />
 
   return (
-    <ScrollView
-      contentContainerStyle={styles.content}
-      keyboardShouldPersistTaps="handled"
-    >
+    <FormScreen>
       <Field
         label="Unit number *"
         value={unitNumber}
@@ -197,12 +195,11 @@ export default function UnitFormScreen({ route, navigation }: Props) {
           />
         </>
       ) : null}
-    </ScrollView>
+    </FormScreen>
   )
 }
 
 const styles = StyleSheet.create({
-  content: { padding: spacing.md },
   spacerMd: { height: spacing.md },
   spacerSm: { height: spacing.sm },
 })
