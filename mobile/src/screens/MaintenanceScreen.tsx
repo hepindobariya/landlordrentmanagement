@@ -97,7 +97,9 @@ export default function MaintenanceScreen({ navigation }: Props) {
       ListEmptyComponent={
         <CenteredMessage
           text="No maintenance tickets"
-          subtext="Tap the + button to log a repair request."
+          subtext="Log your first repair request to start tracking it."
+          actionLabel="Add Ticket"
+          onAction={() => navigation.navigate("MaintenanceForm", {})}
         />
       }
       renderItem={({ item }) => {

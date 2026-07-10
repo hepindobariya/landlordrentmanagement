@@ -40,6 +40,12 @@ jobs:
           EXPO_PUBLIC_API_URL: ${{ secrets.EXPO_PUBLIC_API_URL }}
         run: npx expo prebuild --platform android --no-install
 
+      # Gradle builds (not `eas build`) don't get an OTA channel automatically,
+      # so inject the expo-channel-name header into the generated manifest.
+      - name: Bind APK to the "preview" EAS Update channel
+        working-directory: mobile
+        run: node scripts/set-update-channel.js preview
+
       - name: Set up Java 17 (Temurin)
         uses: actions/setup-java@v4
         with:

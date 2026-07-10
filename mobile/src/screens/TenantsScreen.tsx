@@ -84,7 +84,9 @@ export default function TenantsScreen({ navigation }: Props) {
       ListEmptyComponent={
         <CenteredMessage
           text="No tenants yet"
-          subtext="Tap the + button to add your first tenant."
+          subtext="Add your first tenant to get started."
+          actionLabel="Add Tenant"
+          onAction={() => navigation.navigate("TenantForm", {})}
         />
       }
       renderItem={({ item }) => (
@@ -92,7 +94,7 @@ export default function TenantsScreen({ navigation }: Props) {
           style={styles.card}
           activeOpacity={0.7}
           onPress={() =>
-            navigation.navigate("TenantForm", { tenantId: item.id })
+            navigation.navigate("TenantDetail", { tenantId: item.id })
           }
         >
           <Text style={styles.cardTitle}>{item.full_name}</Text>

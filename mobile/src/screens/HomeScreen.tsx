@@ -41,7 +41,7 @@ export default function HomeScreen({ navigation }: Props) {
   useLayoutEffect(() => {
     navigation.setOptions({
       title: "Dashboard",
-      headerLeft: () => (
+      headerRight: () => (
         <TouchableOpacity onPress={() => supabase.auth.signOut()}>
           <Text style={styles.logoutText}>Log Out</Text>
         </TouchableOpacity>

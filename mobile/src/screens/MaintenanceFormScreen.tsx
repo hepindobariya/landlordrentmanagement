@@ -1,6 +1,7 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack"
 import React, { useEffect, useLayoutEffect, useState } from "react"
 import {
+  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -97,6 +98,19 @@ export default function MaintenanceFormScreen({ route, navigation }: Props) {
     }
   }
 
+  // Ask for confirmation before changing the ticket status.
+  function confirmStatusChange(next: MaintenanceStatus) {
+    if (!ticketId || next === status || saving) return
+    Alert.alert(
+      "Change status?",
+      `Mark this ticket as "${titleCase(next)}"?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Confirm", onPress: () => handleStatusChange(next) },
+      ]
+    )
+  }
+
   async function handleStatusChange(next: MaintenanceStatus) {
     if (!ticketId || next === status) return
     setError(null)
@@ -137,7 +151,7 @@ export default function MaintenanceFormScreen({ route, navigation }: Props) {
               <TouchableOpacity
                 key={s}
                 style={[styles.pill, selected ? styles.pillSelected : null]}
-                onPress={() => handleStatusChange(s)}
+                onPress={() => confirmStatusChange(s)}
                 disabled={saving}
                 activeOpacity={0.8}
               >

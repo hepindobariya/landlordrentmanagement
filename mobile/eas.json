@@ -1,8 +1,28 @@
 {
-  "cli": { "version": ">= 5.0.0" },
+  "cli": {
+    "version": ">= 5.0.0",
+    "appVersionSource": "local"
+  },
   "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "channel": "development",
+      "android": { "buildType": "apk" }
+    },
     "preview": {
       "distribution": "internal",
+      "channel": "preview",
+      "android": { "buildType": "apk" },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://landlordrentmanagement.onrender.com",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://edzbzumkyptgpycwdybb.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVkemJ6dW1reXB0Z3B5Y3dkeWJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM0MzIzMzQsImV4cCI6MjA5OTAwODMzNH0.ykkdfJO2kLfpIzFqX4qDAqME4wkmfuf8CtQfNBoWQkg"
+      }
+    },
+    "production": {
+      "distribution": "internal",
+      "channel": "production",
       "android": { "buildType": "apk" },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://landlordrentmanagement.onrender.com",
