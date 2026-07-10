@@ -1,17 +1,21 @@
 import React, { useEffect, useRef } from "react"
 import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native"
-import { ScrollView, StyleSheet, Text, View } from "react-native"
+import { Platform, ScrollView, StyleSheet, Text, Vibration, View } from "react-native"
 import { colors, font, radius } from "../theme"
 
-// Optional haptics: gives the "tick tick" feel as each item snaps past the
-// center. Wrapped in try/require so the app still runs if the native module
-// isn't installed yet (it is listed in package.json / `expo install`).
-let Haptics: { selectionAsync?: () => void } | null = null
-try {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  Haptics = require("expo-haptics")
-} catch (e) {
-  Haptics = null
+// Tick feedback as each item snaps past the center. We use React Native's
+// built-in Vibration (a core API, always available) instead of a native module
+// like expo-haptics so this component can never fail to resolve at bundle time
+// or crash on start. Android gets a short 8ms "tick"; iOS is skipped because a
+// single Vibration call there is a full, heavy buzz that feels wrong on a wheel.
+function tick() {
+  if (Platform.OS === "android") {
+    try {
+      Vibration.vibrate(8)
+    } catch (e) {
+      // ignore — feedback is best-effort only
+    }
+  }
 }
 
 const ITEM_HEIGHT = 44
@@ -52,7 +56,7 @@ export function WheelPicker({
     const idx = clamp(Math.round(y / ITEM_HEIGHT))
     if (idx !== lastTick.current) {
       lastTick.current = idx
-      Haptics?.selectionAsync?.()
+      tick()
     }
   }
 
