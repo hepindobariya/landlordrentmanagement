@@ -10,14 +10,16 @@ import { sendOk } from "../../utils/response"
 import {
   idParamSchema,
   isoDateSchema,
+  moneySchema,
   paginationSchema,
+  roundMoney,
   uuidSchema,
 } from "../../utils/validation"
 
 const generateSchema = z.object({
   lease_id: uuidSchema,
   // Optional overrides; default amount = lease rent, default due date = 1st of month.
-  amount: z.number().nonnegative().optional(),
+  amount: moneySchema.optional(),
   due_date: isoDateSchema.optional(),
 })
 
@@ -27,7 +29,7 @@ const listQuerySchema = paginationSchema.extend({
 })
 
 const paySchema = z.object({
-  amount_paid: z.number().nonnegative().optional(),
+  amount_paid: moneySchema.optional(),
   paid_date: isoDateSchema.optional(),
 })
 
@@ -51,7 +53,7 @@ rentChargesRouter.post(
     if (leaseError) throw new ApiError(500, leaseError.message)
     if (!lease) throw new ApiError(404, "Lease not found")
 
-    const amount = body.amount ?? Number(lease.rent_amount)
+    const amount = roundMoney(body.amount ?? Number(lease.rent_amount))
     const dueDate = body.due_date ?? firstDayOfCurrentMonthISO()
 
     // Prevent duplicate charge for the same lease + due date.
@@ -139,8 +141,9 @@ rentChargesRouter.post(
     if (chargeError) throw new ApiError(500, chargeError.message)
     if (!charge) throw new ApiError(404, "Rent charge not found")
 
-    const total = Number(charge.amount)
-    const amountPaid = body.amount_paid ?? total
+    // Round both sides so the paid/partial decision is exact at paise level.
+    const total = roundMoney(Number(charge.amount))
+    const amountPaid = roundMoney(body.amount_paid ?? total)
     const status = amountPaid >= total ? "paid" : "partial"
 
     const { data, error } = await supabase

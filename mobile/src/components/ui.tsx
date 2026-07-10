@@ -1,4 +1,6 @@
+import { Feather } from "@expo/vector-icons"
 import React from "react"
+import type { KeyboardTypeOptions } from "react-native"
 import {
   ActivityIndicator,
   StyleSheet,
@@ -6,67 +8,55 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  type KeyboardTypeOptions,
 } from "react-native"
-import { colors, spacing } from "../theme"
+import { colors, font, radius, shadow, spacing } from "../theme"
 
-type AppButtonProps = {
-  title: string
-  onPress: () => void
-  variant?: "primary" | "danger" | "secondary"
-  loading?: boolean
-  disabled?: boolean
-}
+type ButtonVariant = "primary" | "danger" | "secondary"
 
+// Primary action button. Keeps the same prop API used across every screen.
 export function AppButton({
   title,
   onPress,
   variant = "primary",
   loading = false,
   disabled = false,
-}: AppButtonProps) {
+}: {
+  title: string
+  onPress: () => void
+  variant?: ButtonVariant
+  loading?: boolean
+  disabled?: boolean
+}) {
   const isDisabled = disabled || loading
+  const containerStyle = [
+    styles.btn,
+    variant === "primary" ? styles.btnPrimary : null,
+    variant === "danger" ? styles.btnDanger : null,
+    variant === "secondary" ? styles.btnSecondary : null,
+    isDisabled ? styles.btnDisabled : null,
+  ]
+  const textStyle = [
+    styles.btnText,
+    variant === "secondary" ? styles.btnTextSecondary : styles.btnTextOnColor,
+  ]
+  const spinnerColor = variant === "secondary" ? colors.primary : colors.white
   return (
     <TouchableOpacity
-      style={[
-        styles.button,
-        variant === "primary" && styles.buttonPrimary,
-        variant === "danger" && styles.buttonDanger,
-        variant === "secondary" && styles.buttonSecondary,
-        isDisabled && styles.buttonDisabled,
-      ]}
+      style={containerStyle}
       onPress={onPress}
       disabled={isDisabled}
-      activeOpacity={0.8}
+      activeOpacity={0.85}
     >
       {loading ? (
-        <ActivityIndicator
-          color={variant === "secondary" ? colors.primary : colors.white}
-        />
+        <ActivityIndicator color={spinnerColor} />
       ) : (
-        <Text
-          style={[
-            styles.buttonText,
-            variant === "secondary" && styles.buttonTextSecondary,
-          ]}
-        >
-          {title}
-        </Text>
+        <Text style={textStyle}>{title}</Text>
       )}
     </TouchableOpacity>
   )
 }
 
-type FieldProps = {
-  label: string
-  value: string
-  onChangeText: (text: string) => void
-  placeholder?: string
-  keyboardType?: KeyboardTypeOptions
-  multiline?: boolean
-  editable?: boolean
-}
-
+// Labelled text input.
 export function Field({
   label,
   value,
@@ -75,16 +65,29 @@ export function Field({
   keyboardType,
   multiline = false,
   editable = true,
-}: FieldProps) {
+}: {
+  label: string
+  value: string
+  onChangeText: (text: string) => void
+  placeholder?: string
+  keyboardType?: KeyboardTypeOptions
+  multiline?: boolean
+  editable?: boolean
+}) {
+  const inputStyle = [
+    styles.input,
+    multiline ? styles.inputMultiline : null,
+    !editable ? styles.inputDisabled : null,
+  ]
   return (
-    <View style={styles.field}>
-      <Text style={styles.label}>{label}</Text>
+    <View style={styles.fieldWrap}>
+      <Text style={styles.fieldLabel}>{label}</Text>
       <TextInput
-        style={[styles.input, multiline && styles.inputMultiline]}
+        style={inputStyle}
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        placeholderTextColor={colors.muted}
+        placeholderTextColor={colors.subtle}
         keyboardType={keyboardType}
         multiline={multiline}
         editable={editable}
@@ -93,19 +96,17 @@ export function Field({
   )
 }
 
+// Inline error message.
 export function ErrorText({ text }: { text: string }) {
-  return <Text style={styles.errorText}>{text}</Text>
+  return (
+    <View style={styles.errorWrap}>
+      <Feather name="alert-circle" size={16} color={colors.danger} />
+      <Text style={styles.errorText}>{text}</Text>
+    </View>
+  )
 }
 
-type CenteredMessageProps = {
-  text: string
-  subtext?: string
-  loading?: boolean
-  error?: boolean
-  actionLabel?: string
-  onAction?: () => void
-}
-
+// Full-height centered state: loading, empty, or error.
 export function CenteredMessage({
   text,
   subtext,
@@ -113,27 +114,37 @@ export function CenteredMessage({
   error = false,
   actionLabel,
   onAction,
-}: CenteredMessageProps) {
+}: {
+  text: string
+  subtext?: string
+  loading?: boolean
+  error?: boolean
+  actionLabel?: string
+  onAction?: () => void
+}) {
+  const iconWrapStyle = [styles.centerIcon, error ? styles.centerIconError : null]
   return (
     <View style={styles.centered}>
       {loading ? (
-        <ActivityIndicator
-          size="large"
-          color={colors.primary}
-          style={styles.centeredSpinner}
-        />
-      ) : null}
-      <Text style={[styles.centeredText, error && styles.errorText]}>
-        {text}
-      </Text>
-      {subtext ? <Text style={styles.centeredSubtext}>{subtext}</Text> : null}
+        <ActivityIndicator size="large" color={colors.primary} />
+      ) : (
+        <View style={iconWrapStyle}>
+          <Feather
+            name={error ? "alert-triangle" : "inbox"}
+            size={26}
+            color={error ? colors.danger : colors.primary}
+          />
+        </View>
+      )}
+      <Text style={styles.centerText}>{text}</Text>
+      {subtext ? <Text style={styles.centerSub}>{subtext}</Text> : null}
       {actionLabel && onAction ? (
         <TouchableOpacity
-          style={styles.retryButton}
+          style={styles.centerAction}
           onPress={onAction}
-          activeOpacity={0.8}
+          activeOpacity={0.85}
         >
-          <Text style={styles.retryButtonText}>{actionLabel}</Text>
+          <Text style={styles.centerActionText}>{actionLabel}</Text>
         </TouchableOpacity>
       ) : null}
     </View>
@@ -141,66 +152,104 @@ export function CenteredMessage({
 }
 
 const styles = StyleSheet.create({
-  button: {
-    borderRadius: 10,
-    paddingVertical: spacing.md,
+  btn: {
+    borderRadius: radius.md,
+    height: 52,
     alignItems: "center",
     justifyContent: "center",
+    paddingHorizontal: spacing.lg,
+    flexDirection: "row",
   },
-  buttonPrimary: { backgroundColor: colors.primary },
-  buttonDanger: { backgroundColor: colors.danger },
-  buttonSecondary: {
-    backgroundColor: colors.card,
+  btnPrimary: { backgroundColor: colors.primary, ...shadow.card },
+  btnDanger: { backgroundColor: colors.danger },
+  btnSecondary: {
+    backgroundColor: colors.primaryTint,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.primaryTintStrong,
   },
-  buttonDisabled: { opacity: 0.6 },
-  buttonText: { color: colors.white, fontSize: 16, fontWeight: "700" },
-  buttonTextSecondary: { color: colors.primary },
-  field: { marginBottom: spacing.md },
-  label: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: colors.text,
+  btnDisabled: { opacity: 0.55 },
+  btnText: { fontSize: font.body, fontWeight: "700" },
+  btnTextOnColor: { color: colors.white },
+  btnTextSecondary: { color: colors.primaryDark },
+
+  fieldWrap: { marginBottom: spacing.md },
+  fieldLabel: {
+    fontSize: font.small,
+    fontWeight: "700",
+    color: colors.muted,
     marginBottom: spacing.xs,
+    marginLeft: 2,
   },
   input: {
     backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 10,
+    borderRadius: radius.md,
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    fontSize: 16,
+    paddingVertical: 14,
+    fontSize: font.body,
     color: colors.text,
   },
-  inputMultiline: { minHeight: 90, textAlignVertical: "top" },
-  errorText: { color: colors.danger, fontSize: 14, marginTop: spacing.xs },
+  inputMultiline: { minHeight: 96, paddingTop: 14, textAlignVertical: "top" },
+  inputDisabled: { backgroundColor: colors.background, color: colors.muted },
+
+  errorWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    backgroundColor: colors.dangerBg,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  errorText: {
+    color: colors.danger,
+    fontSize: font.small,
+    fontWeight: "600",
+    flex: 1,
+  },
+
   centered: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    padding: spacing.lg,
+    padding: spacing.xl,
+    backgroundColor: colors.background,
   },
-  centeredSpinner: { marginBottom: spacing.md },
-  centeredText: {
-    fontSize: 17,
+  centerIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: colors.primaryTint,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: spacing.md,
+  },
+  centerIconError: { backgroundColor: colors.dangerBg },
+  centerText: {
+    fontSize: font.h3,
     fontWeight: "700",
     color: colors.text,
     textAlign: "center",
   },
-  centeredSubtext: {
-    fontSize: 15,
+  centerSub: {
+    fontSize: font.body,
     color: colors.muted,
     textAlign: "center",
-    marginTop: spacing.sm,
+    marginTop: spacing.xs,
+    lineHeight: 21,
   },
-  retryButton: {
+  centerAction: {
+    marginTop: spacing.lg,
     backgroundColor: colors.primary,
-    borderRadius: 10,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    marginTop: spacing.md,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
   },
-  retryButtonText: { color: colors.white, fontWeight: "700", fontSize: 15 },
+  centerActionText: {
+    color: colors.white,
+    fontWeight: "700",
+    fontSize: font.body,
+  },
 })

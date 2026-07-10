@@ -10,6 +10,7 @@ import { sendOk } from "../../utils/response"
 import {
   idParamSchema,
   isoDateSchema,
+  moneySchema,
   paginationSchema,
   uuidSchema,
 } from "../../utils/validation"
@@ -20,8 +21,9 @@ const createSchema = z
   .object({
     unit_id: uuidSchema,
     tenant_id: uuidSchema,
-    rent_amount: z.number().nonnegative(),
-    deposit: z.number().nonnegative().default(0),
+    // moneySchema accepts numbers or comma/₹ strings and rounds to paise.
+    rent_amount: moneySchema,
+    deposit: moneySchema.default(0),
     start_date: isoDateSchema,
     end_date: isoDateSchema.optional(),
     billing_cycle: billingCycleEnum.default("monthly"),
@@ -33,8 +35,8 @@ const createSchema = z
 
 const updateSchema = z
   .object({
-    rent_amount: z.number().nonnegative().optional(),
-    deposit: z.number().nonnegative().optional(),
+    rent_amount: moneySchema.optional(),
+    deposit: moneySchema.optional(),
     start_date: isoDateSchema.optional(),
     end_date: isoDateSchema.nullable().optional(),
     billing_cycle: billingCycleEnum.optional(),

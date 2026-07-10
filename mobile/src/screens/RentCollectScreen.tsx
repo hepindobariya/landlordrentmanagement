@@ -1,29 +1,22 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack"
 import React, { useEffect, useLayoutEffect, useState } from "react"
-import {
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native"
-import { DateField } from "../components/DateField"
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native"
 import { AppButton, CenteredMessage, ErrorText, Field } from "../components/ui"
 import { apiFetch } from "../lib/api"
-import {
-  digitsOnly,
-  formatCurrencyInput,
-  formatMoney,
-  toNumber,
-} from "../lib/format"
-import { PAYMENT_METHODS } from "../lib/paymentMethods"
+import { formatMoney } from "../lib/format"
 import type { RootStackParamList } from "../navigation/AppNavigator"
 import { colors, spacing } from "../theme"
 import type { PaymentMethod, RentCharge } from "../types"
 
 type Props = NativeStackScreenProps<RootStackParamList, "RentCollect">
+
+const METHODS: { value: PaymentMethod; label: string }[] = [
+  { value: "cash", label: "Cash" },
+  { value: "upi", label: "UPI" },
+  { value: "bank_transfer", label: "Bank" },
+  { value: "card", label: "Card" },
+  { value: "other", label: "Other" },
+]
 
 function todayISO(): string {
   const d = new Date()
@@ -37,15 +30,13 @@ export default function RentCollectScreen({ route, navigation }: Props) {
   const { chargeId, leaseId } = route.params
 
   const [charge, setCharge] = useState<RentCharge | null>(null)
-  const [amount, setAmount] = useState("") // raw digits, e.g. "15000"
+  const [amount, setAmount] = useState("")
   const [method, setMethod] = useState<PaymentMethod>("cash")
   const [paidDate, setPaidDate] = useState(todayISO())
   const [reference, setReference] = useState("")
   const [note, setNote] = useState("")
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [amountError, setAmountError] = useState<string | null>(null)
-  const [dateError, setDateError] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useLayoutEffect(() => {
@@ -65,7 +56,7 @@ export default function RentCollectScreen({ route, navigation }: Props) {
         if (found) {
           const remaining =
             Number(found.amount) - Number(found.amount_paid ?? 0)
-          setAmount(digitsOnly(String(Math.max(remaining, 0))))
+          setAmount(String(Math.max(remaining, 0)))
         }
       } catch (e) {
         if (!active) return
@@ -81,20 +72,15 @@ export default function RentCollectScreen({ route, navigation }: Props) {
 
   async function handleSave() {
     setError(null)
-    setAmountError(null)
-    setDateError(null)
-
-    const amt = toNumber(amount)
-    let hasError = false
-    if (amt == null || amt <= 0) {
-      setAmountError("Enter an amount greater than ₹0.")
-      hasError = true
+    const amt = Number(amount)
+    if (!Number.isFinite(amt) || amt <= 0) {
+      setError("Enter a valid amount greater than 0.")
+      return
     }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(paidDate)) {
-      setDateError("Pick a valid date.")
-      hasError = true
+      setError("Date must be in YYYY-MM-DD format.")
+      return
     }
-    if (hasError || amt == null) return
 
     const payload: Record<string, unknown> = {
       rent_charge_id: chargeId,
@@ -135,105 +121,88 @@ export default function RentCollectScreen({ route, navigation }: Props) {
   const remaining = Number(charge.amount) - Number(charge.amount_paid ?? 0)
 
   return (
-    <KeyboardAvoidingView
-      style={styles.flex}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 88 : 0}
+    <ScrollView
+      contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
     >
-      <ScrollView
-        contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps="handled"
-      >
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryLabel}>Remaining balance</Text>
-          <Text style={styles.summaryValue}>{formatMoney(remaining)}</Text>
-          <Text style={styles.summarySub}>
-            {formatMoney(charge.amount_paid)} paid of{" "}
-            {formatMoney(charge.amount)}
-          </Text>
-        </View>
+      <View style={styles.summaryCard}>
+        <Text style={styles.summaryLabel}>Remaining balance</Text>
+        <Text style={styles.summaryValue}>{formatMoney(remaining)}</Text>
+        <Text style={styles.summarySub}>
+          {formatMoney(charge.amount_paid)} paid of {formatMoney(charge.amount)}
+        </Text>
+      </View>
 
-        <Field
-          label="Amount received *"
-          value={formatCurrencyInput(amount)}
-          onChangeText={(t) => {
-            setAmount(digitsOnly(t))
-            if (amountError) setAmountError(null)
-          }}
-          keyboardType="numeric"
-          placeholder="₹0"
-          editable={!saving}
-        />
-        {amountError ? <ErrorText text={amountError} /> : null}
+      <Field
+        label="Amount received *"
+        value={amount}
+        onChangeText={setAmount}
+        keyboardType="numeric"
+        placeholder="0"
+        editable={!saving}
+      />
 
-        <View style={styles.spacerSm} />
-        <Text style={styles.fieldLabel}>Method</Text>
-        <View style={styles.methodRow}>
-          {PAYMENT_METHODS.map((m) => {
-            const selected = method === m.value
-            return (
-              <TouchableOpacity
-                key={m.value}
-                style={[styles.pill, selected ? styles.pillSelected : null]}
-                onPress={() => setMethod(m.value)}
-                activeOpacity={0.8}
+      <Text style={styles.fieldLabel}>Method</Text>
+      <View style={styles.methodRow}>
+        {METHODS.map((m) => {
+          const selected = method === m.value
+          return (
+            <TouchableOpacity
+              key={m.value}
+              style={[styles.pill, selected ? styles.pillSelected : null]}
+              onPress={() => setMethod(m.value)}
+              activeOpacity={0.8}
+            >
+              <Text
+                style={[
+                  styles.pillText,
+                  selected ? styles.pillTextSelected : null,
+                ]}
               >
-                <Text
-                  style={[
-                    styles.pillText,
-                    selected ? styles.pillTextSelected : null,
-                  ]}
-                >
-                  {m.icon} {m.label}
-                </Text>
-              </TouchableOpacity>
-            )
-          })}
-        </View>
+                {m.label}
+              </Text>
+            </TouchableOpacity>
+          )
+        })}
+      </View>
 
-        <View style={styles.spacerSm} />
-        <DateField
-          label="Paid date"
-          value={paidDate}
-          onChangeText={(t) => {
-            setPaidDate(t)
-            if (dateError) setDateError(null)
-          }}
-          error={dateError ?? undefined}
-          editable={!saving}
-        />
+      <View style={styles.spacerSm} />
+      <Field
+        label="Paid date"
+        value={paidDate}
+        onChangeText={setPaidDate}
+        placeholder="YYYY-MM-DD"
+        editable={!saving}
+      />
+      <Field
+        label="Reference (optional)"
+        value={reference}
+        onChangeText={setReference}
+        placeholder="e.g. UPI txn id"
+        editable={!saving}
+      />
+      <Field
+        label="Note (optional)"
+        value={note}
+        onChangeText={setNote}
+        placeholder="Any details to remember"
+        multiline
+        editable={!saving}
+      />
 
-        <Field
-          label="Reference (optional)"
-          value={reference}
-          onChangeText={setReference}
-          placeholder="e.g. UPI txn id"
-          editable={!saving}
-        />
-        <Field
-          label="Note (optional)"
-          value={note}
-          onChangeText={setNote}
-          placeholder="Any details to remember"
-          multiline
-          editable={!saving}
-        />
+      {error ? <ErrorText text={error} /> : null}
 
-        {error ? <ErrorText text={error} /> : null}
-
-        <View style={styles.spacerMd} />
-        <AppButton
-          title="Record Payment"
-          onPress={handleSave}
-          loading={saving}
-        />
-      </ScrollView>
-    </KeyboardAvoidingView>
+      <View style={styles.spacerMd} />
+      <AppButton
+        title="Record Payment"
+        onPress={handleSave}
+        loading={saving}
+      />
+    </ScrollView>
   )
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1 },
   content: { padding: spacing.md },
   summaryCard: {
     backgroundColor: colors.primary,
@@ -277,4 +246,4 @@ const styles = StyleSheet.create({
   pillTextSelected: { color: colors.white },
   spacerSm: { height: spacing.sm },
   spacerMd: { height: spacing.md },
-})
+})

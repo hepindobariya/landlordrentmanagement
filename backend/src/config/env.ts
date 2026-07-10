@@ -18,6 +18,10 @@ const envSchema = z.object({
   // Optional so the server still boots before you set it; the webhook route
   // returns 500 if it's missing when a webhook actually arrives.
   EAS_WEBHOOK_SECRET: z.string().min(1).optional(),
+  // Business timezone for all date-only values (rent due dates, paid dates,
+  // "this month" reporting). Defaults to India time so an IST landlord never
+  // sees off-by-one dates from UTC drift after midnight local time.
+  APP_TIMEZONE: z.string().min(1).default("Asia/Kolkata"),
 })
 
 const parsed = envSchema.safeParse(process.env)

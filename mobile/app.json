@@ -6,14 +6,6 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "runtimeVersion": {
-      "policy": "appVersion"
-    },
-    "updates": {
-      "url": "https://u.expo.dev/8bfca793-2a17-4708-8f53-c4918336f24b",
-      "enabled": true,
-      "fallbackToCacheTimeout": 0
-    },
     "ios": {
       "supportsTablet": true
     },
@@ -35,10 +27,6 @@
         "projectId": "8bfca793-2a17-4708-8f53-c4918336f24b"
       }
     },
-    "owner": "hepindobariyas-team",
-    "plugins": [
-      "@react-native-community/datetimepicker",
-      "expo-updates"
-    ]
+    "owner": "hepindobariyas-team"
   }
 }
