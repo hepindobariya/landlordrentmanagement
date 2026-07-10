@@ -2,15 +2,14 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack"
 import React, { useEffect, useLayoutEffect, useState } from "react"
 import {
   Alert,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native"
-import { AppButton, CenteredMessage, ErrorText, Field } from "../components/ui"
-import { DatePickerField } from "../components/DatePickerField"
+import { FormScreen } from "../components/FormScreen"
+import { AppButton, CenteredMessage, DatePickerField, ErrorText, Field } from "../components/ui"
 import { apiFetch } from "../lib/api"
 import type { RootStackParamList } from "../navigation/AppNavigator"
 import { colors, spacing } from "../theme"
@@ -250,10 +249,7 @@ export default function LeaseFormScreen({ route, navigation }: Props) {
     : tenants
 
   return (
-    <ScrollView
-      contentContainerStyle={styles.content}
-      keyboardShouldPersistTaps="handled"
-    >
+    <FormScreen>
       {!isEdit ? (
         <>
           <Text style={styles.fieldLabel}>Unit *</Text>
@@ -451,15 +447,14 @@ export default function LeaseFormScreen({ route, navigation }: Props) {
       <DatePickerField
         label={isEdit ? "Start date" : "Start date *"}
         value={startDate}
-        onChange={setStartDate}
+        onChangeText={setStartDate}
         editable={!busy}
       />
       <DatePickerField
         label="End date (optional)"
         value={endDate}
-        onChange={setEndDate}
+        onChangeText={setEndDate}
         editable={!busy}
-        optional
       />
 
       {isEdit ? (
@@ -512,12 +507,11 @@ export default function LeaseFormScreen({ route, navigation }: Props) {
           />
         </>
       ) : null}
-    </ScrollView>
+    </FormScreen>
   )
 }
 
 const styles = StyleSheet.create({
-  content: { padding: spacing.md },
   fieldLabel: {
     fontSize: 14,
     fontWeight: "600",

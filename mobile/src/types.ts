@@ -131,26 +131,6 @@ export type RentCharge = {
   created_at: string
 }
 
-// A rent charge enriched with the tenant name, returned by the calendar route.
-export type CalendarCharge = {
-  id: string
-  lease_id: string
-  amount: number | string
-  amount_paid: number | string
-  due_date: string
-  paid_date: string | null
-  status: RentChargeStatus
-  tenant_name: string
-}
-
-// One month of the collections trend (from /reports/trends).
-export type MonthTrend = {
-  month: string
-  collected: number
-  expected: number
-  outstanding: number
-}
-
 export type PaymentMethod = "cash" | "upi" | "bank_transfer" | "card" | "other"
 
 export type Payment = {
@@ -245,4 +225,35 @@ export type Summary = {
   occupied: number
   occupancy_pct: number
   tickets_open: number
+}
+
+// --- Stage 4: notifications ---
+export type NotificationType =
+  | "payment"
+  | "partial"
+  | "due"
+  | "overdue"
+  | "ticket_new"
+  | "ticket_status"
+  | "lease_new"
+  | "lease_expiring"
+  | "tenant_change"
+  | "summary"
+
+export type SummaryFrequency = "off" | "daily" | "weekly"
+
+// Public shape returned by GET/PATCH /notifications/settings (no secrets).
+export type NotificationSettings = {
+  telegram_linked: boolean
+  notify_payment: boolean
+  notify_partial: boolean
+  notify_due: boolean
+  notify_overdue: boolean
+  notify_ticket_new: boolean
+  notify_ticket_status: boolean
+  notify_lease_new: boolean
+  notify_lease_expiring: boolean
+  notify_tenant_change: boolean
+  notify_summary: boolean
+  summary_frequency: SummaryFrequency
 }
