@@ -62,6 +62,26 @@ export type RentCharge = {
   created_at: string
 }
 
+// A rent charge enriched with the tenant name, returned by the calendar route.
+export type CalendarCharge = {
+  id: string
+  lease_id: string
+  amount: number | string
+  amount_paid: number | string
+  due_date: string
+  paid_date: string | null
+  status: RentChargeStatus
+  tenant_name: string
+}
+
+// One month of the collections trend (from /reports/trends).
+export type MonthTrend = {
+  month: string
+  collected: number
+  expected: number
+  outstanding: number
+}
+
 export type PaymentMethod = "cash" | "upi" | "bank_transfer" | "card" | "other"
 
 export type Payment = {

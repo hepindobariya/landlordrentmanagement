@@ -128,3 +128,55 @@ reportsRouter.get(
     })
   })
 )
+
+// GET /api/v1/reports/trends
+// Collections vs expected (and outstanding) for the last 5 calendar months,
+// oldest first. Powers the dashboard trend chart.
+reportsRouter.get(
+  "/trends",
+  asyncHandler(async (req, res) => {
+    const landlordId = getLandlordId(req)
+
+    const { data: charges, error } = await supabase
+      .from("rent_charges")
+      .select("amount, amount_paid, due_date")
+      .eq("landlord_id", landlordId)
+
+    if (error) throw new ApiError(500, error.message)
+
+    const now = new Date()
+    const months: string[] = []
+    for (let i = 4; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+      months.push(
+        `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+      )
+    }
+
+    const acc = new Map<string, { collected: number; expected: number }>()
+    for (const key of months) acc.set(key, { collected: 0, expected: 0 })
+
+    for (const c of charges ?? []) {
+      const key = String(c.due_date).slice(0, 7)
+      const entry = acc.get(key)
+      if (entry) {
+        entry.expected += Number(c.amount ?? 0)
+        entry.collected += Number(c.amount_paid ?? 0)
+      }
+    }
+
+    const trend = months.map((key) => {
+      const entry = acc.get(key) ?? { collected: 0, expected: 0 }
+      const collected = roundMoney(entry.collected)
+      const expected = roundMoney(entry.expected)
+      return {
+        month: key,
+        collected,
+        expected,
+        outstanding: roundMoney(Math.max(0, expected - collected)),
+      }
+    })
+
+    return sendOk(res, { trend })
+  })
+)

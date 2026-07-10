@@ -28,6 +28,14 @@ const listQuerySchema = paginationSchema.extend({
   status: z.enum(["due", "paid", "partial"]).optional(),
 })
 
+// Calendar endpoint: all charges for a given month (default current month).
+const calendarQuerySchema = z.object({
+  month: z
+    .string()
+    .regex(/^\d{4}-\d{2}$/, "month must be in YYYY-MM format")
+    .optional(),
+})
+
 const paySchema = z.object({
   amount_paid: moneySchema.optional(),
   paid_date: isoDateSchema.optional(),
@@ -88,6 +96,71 @@ rentChargesRouter.post(
 
     if (error) throw new ApiError(500, error.message)
     return sendOk(res, data, 201)
+  })
+)
+
+// CALENDAR: every charge due within a month, with the tenant name attached.
+// Powers the Rent Collection Calendar (day-level Paid / Partial / Unpaid).
+rentChargesRouter.get(
+  "/calendar",
+  asyncHandler(async (req, res) => {
+    const landlordId = getLandlordId(req)
+    const { month } = calendarQuerySchema.parse(req.query)
+
+    const m = month ?? firstDayOfCurrentMonthISO().slice(0, 7)
+    const [yStr, moStr] = m.split("-")
+    const y = Number(yStr)
+    const mo = Number(moStr)
+    const start = `${m}-01`
+    const nextY = mo === 12 ? y + 1 : y
+    const nextMo = mo === 12 ? 1 : mo + 1
+    const end = `${nextY}-${String(nextMo).padStart(2, "0")}-01`
+
+    const { data: charges, error } = await supabase
+      .from("rent_charges")
+      .select("id, lease_id, amount, amount_paid, due_date, paid_date, status")
+      .eq("landlord_id", landlordId)
+      .gte("due_date", start)
+      .lt("due_date", end)
+      .order("due_date", { ascending: true })
+
+    if (error) throw new ApiError(500, error.message)
+
+    // Attach tenant names (charge -> lease -> tenant), all landlord-scoped.
+    const rows = charges ?? []
+    const leaseIds = [...new Set(rows.map((c) => c.lease_id))]
+    const tenantByLease = new Map<string, string>()
+
+    if (leaseIds.length > 0) {
+      const { data: leases, error: leaseErr } = await supabase
+        .from("leases")
+        .select("id, tenant_id")
+        .eq("landlord_id", landlordId)
+        .in("id", leaseIds)
+      if (leaseErr) throw new ApiError(500, leaseErr.message)
+
+      const tenantIds = [...new Set((leases ?? []).map((l) => l.tenant_id))]
+      const nameById = new Map<string, string>()
+      if (tenantIds.length > 0) {
+        const { data: tenants, error: tenantErr } = await supabase
+          .from("tenants")
+          .select("id, full_name")
+          .eq("landlord_id", landlordId)
+          .in("id", tenantIds)
+        if (tenantErr) throw new ApiError(500, tenantErr.message)
+        for (const t of tenants ?? []) nameById.set(t.id, t.full_name)
+      }
+      for (const l of leases ?? []) {
+        tenantByLease.set(l.id, nameById.get(l.tenant_id) ?? "Tenant")
+      }
+    }
+
+    const items = rows.map((c) => ({
+      ...c,
+      tenant_name: tenantByLease.get(c.lease_id) ?? "Tenant",
+    }))
+
+    return sendOk(res, { month: m, start, end, charges: items })
   })
 )
 

@@ -19,11 +19,13 @@ import HomeScreen from "../screens/HomeScreen"
 import LeaseDetailScreen from "../screens/LeaseDetailScreen"
 import LeaseFormScreen from "../screens/LeaseFormScreen"
 import LeasesScreen from "../screens/LeasesScreen"
+import LegalLibraryScreen from "../screens/LegalLibraryScreen"
 import MaintenanceFormScreen from "../screens/MaintenanceFormScreen"
 import MaintenanceScreen from "../screens/MaintenanceScreen"
 import PropertiesScreen from "../screens/PropertiesScreen"
 import PropertyDetailScreen from "../screens/PropertyDetailScreen"
 import PropertyFormScreen from "../screens/PropertyFormScreen"
+import RentCalendarScreen from "../screens/RentCalendarScreen"
 import RentCollectScreen from "../screens/RentCollectScreen"
 import TenantFormScreen from "../screens/TenantFormScreen"
 import TenantsScreen from "../screens/TenantsScreen"
@@ -44,6 +46,8 @@ export type RootStackParamList = {
   LeaseDetail: { leaseId: string }
   LeaseForm: { leaseId?: string }
   RentCollect: { chargeId: string; leaseId: string }
+  RentCalendar: undefined
+  LegalLibrary: undefined
   Maintenance: undefined
   MaintenanceForm: { ticketId?: string }
 }
@@ -196,6 +200,8 @@ const stackScreenOptions = {
 }
 
 const hideHeader = { headerShown: false }
+const rentCalendarOptions = { title: "Rent calendar" }
+const legalLibraryOptions = { title: "Legal & compliance" }
 
 export default function AppNavigator() {
   return (
@@ -210,6 +216,16 @@ export default function AppNavigator() {
         <Stack.Screen name="LeaseDetail" component={LeaseDetailScreen} />
         <Stack.Screen name="LeaseForm" component={LeaseFormScreen} />
         <Stack.Screen name="RentCollect" component={RentCollectScreen} />
+        <Stack.Screen
+          name="RentCalendar"
+          component={RentCalendarScreen}
+          options={rentCalendarOptions}
+        />
+        <Stack.Screen
+          name="LegalLibrary"
+          component={LegalLibraryScreen}
+          options={legalLibraryOptions}
+        />
         <Stack.Screen name="MaintenanceForm" component={MaintenanceFormScreen} />
       </Stack.Navigator>
     </NavigationContainer>

@@ -29,6 +29,11 @@ const ACTIONS: Action[] = [
   { key: "Maintenance", label: "Maintenance", icon: "tool" },
 ]
 
+const TOOLS: Action[] = [
+  { key: "RentCalendar", label: "Rent calendar", icon: "calendar" },
+  { key: "LegalLibrary", label: "Legal library", icon: "book-open" },
+]
+
 export default function HomeScreen({ navigation }: Props) {
   const [summary, setSummary] = useState<Summary | null>(null)
   const [loading, setLoading] = useState(true)
@@ -194,6 +199,26 @@ export default function HomeScreen({ navigation }: Props) {
           ))}
         </View>
       </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Insights & tools</Text>
+        <View style={styles.actionGrid}>
+          {TOOLS.map((a) => (
+            <TouchableOpacity
+              key={a.key}
+              style={styles.actionCard}
+              activeOpacity={0.8}
+              onPress={() => (navigation as any).navigate(a.key)}
+            >
+              <View style={styles.actionIconAlt}>
+                <Feather name={a.icon} size={20} color={colors.info} />
+              </View>
+              <Text style={styles.actionLabel}>{a.label}</Text>
+              <Feather name="chevron-right" size={18} color={colors.subtle} />
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
     </ScrollView>
   )
 }
@@ -340,6 +365,15 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: radius.md,
     backgroundColor: colors.primaryTint,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: spacing.md,
+  },
+  actionIconAlt: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.md,
+    backgroundColor: colors.infoBg,
     alignItems: "center",
     justifyContent: "center",
     marginRight: spacing.md,
