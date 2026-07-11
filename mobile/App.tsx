@@ -1,3 +1,4 @@
+// Trigger build - Telegram integration
 import { Session } from "@supabase/supabase-js"
 import { StatusBar } from "expo-status-bar"
 import React, { useEffect, useState } from "react"
