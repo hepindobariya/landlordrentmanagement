@@ -46,6 +46,9 @@ const updateSchema = z
     billing_cycle: billingCycleEnum.optional(),
     billing_mode: billingModeEnum.optional(),
     status: z.enum(["active", "ended"]).optional(),
+    deposit_returned: moneySchema.nullable().optional(),
+    final_settlement_date: isoDateSchema.nullable().optional(),
+    settlement_notes: z.string().max(2000).nullable().optional(),
   })
   .refine((d) => Object.keys(d).length > 0, {
     message: "At least one field is required",
@@ -53,6 +56,9 @@ const updateSchema = z
 
 const endSchema = z.object({
   end_date: isoDateSchema.optional(),
+  deposit_returned: moneySchema.optional(),
+  final_settlement_date: isoDateSchema.optional(),
+  settlement_notes: z.string().max(2000).optional(),
 })
 
 const listQuerySchema = paginationSchema.extend({
@@ -168,6 +174,10 @@ leasesRouter.post(
       .update({
         status: "ended",
         end_date: body.end_date ?? todayISODate(),
+        deposit_returned: body.deposit_returned ?? null,
+        final_settlement_date:
+          body.final_settlement_date ?? body.end_date ?? todayISODate(),
+        settlement_notes: body.settlement_notes ?? null,
       })
       .eq("landlord_id", landlordId)
       .eq("id", id)

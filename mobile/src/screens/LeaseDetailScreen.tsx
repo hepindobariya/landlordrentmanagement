@@ -9,7 +9,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native"
-import { AppButton, CenteredMessage } from "../components/ui"
+import { DatePickerField } from "../components/DatePickerField"
+import { AppButton, CenteredMessage, ErrorText, Field } from "../components/ui"
 import { apiFetch } from "../lib/api"
 import { formatDate, formatMoney, titleCase } from "../lib/format"
 import type { RootStackParamList } from "../navigation/AppNavigator"
@@ -27,6 +28,11 @@ export default function LeaseDetailScreen({ route, navigation }: Props) {
   const [charges, setCharges] = useState<RentCharge[]>([])
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
+  const [showSettle, setShowSettle] = useState(false)
+  const [depositReturned, setDepositReturned] = useState("")
+  const [settleDate, setSettleDate] = useState("")
+  const [settleNotes, setSettleNotes] = useState("")
+  const [ending, setEnding] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useLayoutEffect(() => {
@@ -88,6 +94,40 @@ export default function LeaseDetailScreen({ route, navigation }: Props) {
     }
   }
 
+  function openSettle() {
+    setError(null)
+    setDepositReturned(lease?.deposit != null ? String(lease.deposit) : "")
+    const d = new Date()
+    const p = (n: number) => String(n).padStart(2, "0")
+    setSettleDate(`${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`)
+    setSettleNotes("")
+    setShowSettle(true)
+  }
+
+  async function handleEndLease() {
+    setError(null)
+    setEnding(true)
+    try {
+      const cleaned = depositReturned.replace(/[\u20B9,\s]/g, "")
+      const body: Record<string, unknown> = {
+        end_date: settleDate || undefined,
+        final_settlement_date: settleDate || undefined,
+        settlement_notes: settleNotes.trim() || undefined,
+      }
+      if (cleaned) body.deposit_returned = Number(cleaned)
+      await apiFetch(`/api/v1/leases/${leaseId}/end`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      })
+      setShowSettle(false)
+      await load()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to end lease.")
+    } finally {
+      setEnding(false)
+    }
+  }
+
   if (loading) return <CenteredMessage loading text="Loading lease…" />
 
   if (error || !lease) {
@@ -116,7 +156,84 @@ export default function LeaseDetailScreen({ route, navigation }: Props) {
         <Row label="Start" value={formatDate(lease.start_date)} />
         <Row label="End" value={formatDate(lease.end_date)} />
         <Row label="Status" value={titleCase(lease.status)} />
+        {lease.status === "ended" ? (
+          <>
+            {lease.deposit_returned != null ? (
+              <Row
+                label="Deposit returned"
+                value={formatMoney(lease.deposit_returned)}
+              />
+            ) : null}
+            {lease.final_settlement_date ? (
+              <Row
+                label="Settled on"
+                value={formatDate(lease.final_settlement_date)}
+              />
+            ) : null}
+            {lease.settlement_notes ? (
+              <Row label="Notes" value={lease.settlement_notes} />
+            ) : null}
+          </>
+        ) : null}
       </View>
+
+      {lease.status === "active" ? (
+        showSettle ? (
+          <View style={styles.card}>
+            <Text style={styles.settleTitle}>End lease & settle</Text>
+            <Text style={styles.settleHint}>
+              Record the deposit returned and closing details. This marks the
+              lease ended and moves it to the Archived tab.
+            </Text>
+            <Field
+              label="Deposit returned"
+              value={depositReturned}
+              onChangeText={setDepositReturned}
+              placeholder="e.g. 20,000"
+              keyboardType="numeric"
+              editable={!ending}
+            />
+            <DatePickerField
+              label="Settlement date"
+              value={settleDate}
+              onChange={setSettleDate}
+              editable={!ending}
+            />
+            <Field
+              label="Settlement notes"
+              value={settleNotes}
+              onChangeText={setSettleNotes}
+              placeholder="Deductions, condition, balance paid…"
+              multiline
+              editable={!ending}
+            />
+            {error ? <ErrorText text={error} /> : null}
+            <View style={styles.spacerSm} />
+            <AppButton
+              title="Confirm end lease"
+              variant="danger"
+              onPress={handleEndLease}
+              loading={ending}
+            />
+            <View style={styles.spacerSm} />
+            <AppButton
+              title="Cancel"
+              variant="secondary"
+              onPress={() => setShowSettle(false)}
+              disabled={ending}
+            />
+          </View>
+        ) : (
+          <>
+            <AppButton
+              title="End lease & settle"
+              variant="danger"
+              onPress={openSettle}
+            />
+            <View style={styles.spacerMd} />
+          </>
+        )
+      ) : null}
 
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Rent charges</Text>
@@ -222,6 +339,14 @@ const styles = StyleSheet.create({
   sectionHeader: { marginBottom: spacing.sm },
   sectionTitle: { fontSize: 16, fontWeight: "700", color: colors.text },
   spacerMd: { height: spacing.md },
+  spacerSm: { height: spacing.sm },
+  settleTitle: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: colors.text,
+    marginBottom: spacing.xs,
+  },
+  settleHint: { fontSize: 13, color: colors.muted, marginBottom: spacing.md },
   emptyText: { fontSize: 14, color: colors.muted },
   chargeRow: {
     flexDirection: "row",

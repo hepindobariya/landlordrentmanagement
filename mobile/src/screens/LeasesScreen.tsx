@@ -24,6 +24,7 @@ export default function LeasesScreen({ navigation }: Props) {
   const [units, setUnits] = useState<Record<string, Unit>>({})
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const [filter, setFilter] = useState<"active" | "ended">("active")
   const [error, setError] = useState<string | null>(null)
 
   useLayoutEffect(() => {
@@ -43,7 +44,7 @@ export default function LeasesScreen({ navigation }: Props) {
     setError(null)
     try {
       const [leaseList, tenantList, unitList] = await Promise.all([
-        apiFetch<Lease[]>("/api/v1/leases"),
+        apiFetch<Lease[]>(`/api/v1/leases?status=${filter}`),
         apiFetch<Tenant[]>("/api/v1/tenants"),
         apiFetch<Unit[]>("/api/v1/units"),
       ])
@@ -64,7 +65,7 @@ export default function LeasesScreen({ navigation }: Props) {
       setLoading(false)
       setRefreshing(false)
     }
-  }, [])
+  }, [filter])
 
   useFocusEffect(
     useCallback(() => {
@@ -89,6 +90,7 @@ export default function LeasesScreen({ navigation }: Props) {
     <FlatList
       data={leases}
       keyExtractor={(item) => item.id}
+      ListHeaderComponent={<FilterTabs value={filter} onChange={setFilter} />}
       contentContainerStyle={
         leases.length === 0 ? styles.emptyContainer : styles.listContent
       }
@@ -101,8 +103,12 @@ export default function LeasesScreen({ navigation }: Props) {
       }
       ListEmptyComponent={
         <CenteredMessage
-          text="No leases yet"
-          subtext="Tap the + button to create a lease linking a tenant to a unit."
+          text={filter === "active" ? "No active leases" : "No archived leases"}
+          subtext={
+            filter === "active"
+              ? "Tap the + button to create a lease linking a tenant to a unit."
+              : "Leases you end will appear here with their settlement details."
+          }
         />
       }
       renderItem={({ item }) => {
@@ -148,8 +154,58 @@ export default function LeasesScreen({ navigation }: Props) {
   )
 }
 
+function FilterTabs({
+  value,
+  onChange,
+}: {
+  value: "active" | "ended"
+  onChange: (v: "active" | "ended") => void
+}) {
+  const activeStyle = [styles.tab, value === "active" ? styles.tabActive : null]
+  const endedStyle = [styles.tab, value === "ended" ? styles.tabActive : null]
+  const activeText = [
+    styles.tabText,
+    value === "active" ? styles.tabTextActive : null,
+  ]
+  const endedText = [
+    styles.tabText,
+    value === "ended" ? styles.tabTextActive : null,
+  ]
+  return (
+    <View style={styles.tabs}>
+      <TouchableOpacity
+        style={activeStyle}
+        activeOpacity={0.8}
+        onPress={() => onChange("active")}
+      >
+        <Text style={activeText}>Active</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={endedStyle}
+        activeOpacity={0.8}
+        onPress={() => onChange("ended")}
+      >
+        <Text style={endedText}>Archived</Text>
+      </TouchableOpacity>
+    </View>
+  )
+}
+
 const styles = StyleSheet.create({
   addText: { color: colors.primary, fontWeight: "700", fontSize: 26 },
+  tabs: { flexDirection: "row", gap: spacing.sm, marginBottom: spacing.md },
+  tab: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: spacing.sm,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+  },
+  tabActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  tabText: { fontSize: 14, fontWeight: "700", color: colors.muted },
+  tabTextActive: { color: colors.white },
   listContent: { padding: spacing.md },
   emptyContainer: { flexGrow: 1 },
   card: {

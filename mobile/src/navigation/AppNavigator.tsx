@@ -15,6 +15,8 @@ import {
   View,
 } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
+import ExpenseFormScreen from "../screens/ExpenseFormScreen"
+import ExpensesScreen from "../screens/ExpensesScreen"
 import HomeScreen from "../screens/HomeScreen"
 import LeaseDetailScreen from "../screens/LeaseDetailScreen"
 import LeaseFormScreen from "../screens/LeaseFormScreen"
@@ -50,6 +52,8 @@ export type RootStackParamList = {
   LegalLibrary: undefined
   Maintenance: undefined
   MaintenanceForm: { ticketId?: string }
+  Expenses: undefined
+  ExpenseForm: { expenseId?: string }
 }
 
 const Tab = createBottomTabNavigator()
@@ -74,6 +78,7 @@ const ADD_ITEMS: Array<{
   { screen: "TenantForm", label: "New tenant", icon: "user", bg: colors.infoBg, fg: colors.info },
   { screen: "LeaseForm", label: "New lease", icon: "file-text", bg: colors.warnBg, fg: colors.warn },
   { screen: "MaintenanceForm", label: "New ticket", icon: "tool", bg: colors.dangerBg, fg: colors.danger },
+  { screen: "ExpenseForm", label: "New expense", icon: "credit-card", bg: colors.successBg, fg: colors.success },
 ]
 
 function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
@@ -202,6 +207,7 @@ const stackScreenOptions = {
 const hideHeader = { headerShown: false }
 const rentCalendarOptions = { title: "Rent calendar" }
 const legalLibraryOptions = { title: "Legal & compliance" }
+const expensesOptions = { title: "Expenses" }
 
 export default function AppNavigator() {
   return (
@@ -227,6 +233,12 @@ export default function AppNavigator() {
           options={legalLibraryOptions}
         />
         <Stack.Screen name="MaintenanceForm" component={MaintenanceFormScreen} />
+        <Stack.Screen
+          name="Expenses"
+          component={ExpensesScreen}
+          options={expensesOptions}
+        />
+        <Stack.Screen name="ExpenseForm" component={ExpenseFormScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   )

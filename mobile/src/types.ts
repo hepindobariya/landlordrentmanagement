@@ -61,6 +61,9 @@ export type Lease = {
   billing_cycle: BillingCycle
   billing_mode: BillingMode
   status: LeaseStatus
+  deposit_returned: number | string | null
+  final_settlement_date: string | null
+  settlement_notes: string | null
   created_at: string
 }
 
@@ -78,6 +81,26 @@ export type RentCharge = {
   created_at: string
 }
 
+// A rent charge enriched with the tenant name, returned by the calendar route.
+export type CalendarCharge = {
+  id: string
+  lease_id: string
+  amount: number | string
+  amount_paid: number | string
+  due_date: string
+  paid_date: string | null
+  status: RentChargeStatus
+  tenant_name: string
+}
+
+// One month of the collections trend (from /reports/trends).
+export type MonthTrend = {
+  month: string
+  collected: number
+  expected: number
+  outstanding: number
+}
+
 export type PaymentMethod = "cash" | "upi" | "bank_transfer" | "card" | "other"
 
 export type Payment = {
@@ -92,6 +115,52 @@ export type Payment = {
   note: string | null
   receipt_no: string | null
   created_at: string
+}
+
+export type ExpenseCategory =
+  | "mortgage"
+  | "taxes"
+  | "insurance"
+  | "repairs"
+  | "landscape"
+  | "pest_control"
+  | "management_fee"
+  | "appliance"
+  | "utilities"
+  | "other"
+
+export type RecurInterval = "monthly" | "quarterly" | "yearly"
+
+export type Expense = {
+  id: string
+  landlord_id: string
+  property_id: string | null
+  lease_id: string | null
+  category: ExpenseCategory
+  title: string | null
+  amount: number | string
+  spent_on: string
+  is_recurring: boolean
+  recur_interval: RecurInterval | null
+  tenant_payable: boolean
+  paid: boolean
+  receipt_url: string | null
+  remarks: string | null
+  created_at: string
+}
+
+export type ExpenseCategoryTotal = {
+  category: ExpenseCategory
+  total: number
+}
+
+export type ExpenseSummary = {
+  total: number
+  paid_total: number
+  unpaid_total: number
+  tenant_payable_total: number
+  count: number
+  by_category: ExpenseCategoryTotal[]
 }
 
 export type MaintenanceStatus = "open" | "in_progress" | "closed"
@@ -124,35 +193,4 @@ export type Summary = {
   occupied: number
   occupancy_pct: number
   tickets_open: number
-}
-
-// --- Stage 4: notifications ---
-export type NotificationType =
-  | "payment"
-  | "partial"
-  | "due"
-  | "overdue"
-  | "ticket_new"
-  | "ticket_status"
-  | "lease_new"
-  | "lease_expiring"
-  | "tenant_change"
-  | "summary"
-
-export type SummaryFrequency = "off" | "daily" | "weekly"
-
-// Public shape returned by GET/PATCH /notifications/settings (no secrets).
-export type NotificationSettings = {
-  telegram_linked: boolean
-  notify_payment: boolean
-  notify_partial: boolean
-  notify_due: boolean
-  notify_overdue: boolean
-  notify_ticket_new: boolean
-  notify_ticket_status: boolean
-  notify_lease_new: boolean
-  notify_lease_expiring: boolean
-  notify_tenant_change: boolean
-  notify_summary: boolean
-  summary_frequency: SummaryFrequency
 }

@@ -41,6 +41,13 @@ export async function apiFetch<T>(
     },
   })
 
+  // Global 401 handling: a rejected or expired token signs the user out so the
+  // app returns to the Login screen instead of surfacing a generic error.
+  if (response.status === 401) {
+    await supabase.auth.signOut()
+    throw new Error("Your session has expired. Please log in again.")
+  }
+
   let body: ApiResult<T>
   try {
     body = (await response.json()) as ApiResult<T>

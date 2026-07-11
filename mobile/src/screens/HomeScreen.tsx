@@ -30,6 +30,7 @@ const ACTIONS: Action[] = [
 ]
 
 const TOOLS: Action[] = [
+  { key: "Expenses", label: "Expenses", icon: "credit-card" },
   { key: "RentCalendar", label: "Rent calendar", icon: "calendar" },
   { key: "LegalLibrary", label: "Legal library", icon: "book-open" },
 ]
