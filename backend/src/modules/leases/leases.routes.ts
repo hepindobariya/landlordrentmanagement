@@ -31,6 +31,9 @@ const createSchema = z
     end_date: isoDateSchema.optional(),
     billing_cycle: billingCycleEnum.default("monthly"),
     billing_mode: billingModeEnum.default("prepaid"),
+    increment_pct: z.coerce.number().min(0).max(100).optional(),
+    increment_months: z.coerce.number().int().positive().optional(),
+    last_revised_date: isoDateSchema.optional(),
   })
   .refine((d) => !d.end_date || d.end_date >= d.start_date, {
     message: "end_date must be on or after start_date",
@@ -46,6 +49,9 @@ const updateSchema = z
     billing_cycle: billingCycleEnum.optional(),
     billing_mode: billingModeEnum.optional(),
     status: z.enum(["active", "ended"]).optional(),
+    increment_pct: z.coerce.number().min(0).max(100).nullable().optional(),
+    increment_months: z.coerce.number().int().positive().nullable().optional(),
+    last_revised_date: isoDateSchema.nullable().optional(),
     deposit_returned: moneySchema.nullable().optional(),
     final_settlement_date: isoDateSchema.nullable().optional(),
     settlement_notes: z.string().max(2000).nullable().optional(),
@@ -187,5 +193,73 @@ leasesRouter.post(
     if (error) throw new ApiError(500, error.message)
     if (!data) throw new ApiError(404, "Lease not found")
     return sendOk(res, data)
+  })
+)
+
+// --- Lease utilities (Batch 4) --------------------------------------------
+const utilitySchema = z.object({
+  kind: z.string().min(1).max(60),
+  billing: z.enum(["metered", "fixed"]).default("fixed"),
+  rate: moneySchema.default(0),
+})
+
+const utilityParamsSchema = z.object({
+  id: uuidSchema,
+  utilId: uuidSchema,
+})
+
+// LIST utility lines for a lease
+leasesRouter.get(
+  "/:id/utilities",
+  asyncHandler(async (req, res) => {
+    const landlordId = getLandlordId(req)
+    const { id } = idParamSchema.parse(req.params)
+    await assertOwned("leases", id, landlordId, "Lease")
+    const { data, error } = await supabase
+      .from("lease_utilities")
+      .select("*")
+      .eq("landlord_id", landlordId)
+      .eq("lease_id", id)
+      .order("created_at", { ascending: true })
+    if (error) throw new ApiError(500, error.message)
+    return sendOk(res, data)
+  })
+)
+
+// ADD a utility line to a lease
+leasesRouter.post(
+  "/:id/utilities",
+  asyncHandler(async (req, res) => {
+    const landlordId = getLandlordId(req)
+    const { id } = idParamSchema.parse(req.params)
+    await assertOwned("leases", id, landlordId, "Lease")
+    const body = utilitySchema.parse(req.body)
+    const { data, error } = await supabase
+      .from("lease_utilities")
+      .insert({ ...body, lease_id: id, landlord_id: landlordId })
+      .select("*")
+      .single()
+    if (error) throw new ApiError(500, error.message)
+    return sendOk(res, data, 201)
+  })
+)
+
+// DELETE a utility line
+leasesRouter.delete(
+  "/:id/utilities/:utilId",
+  asyncHandler(async (req, res) => {
+    const landlordId = getLandlordId(req)
+    const { id, utilId } = utilityParamsSchema.parse(req.params)
+    const { data, error } = await supabase
+      .from("lease_utilities")
+      .delete()
+      .eq("landlord_id", landlordId)
+      .eq("lease_id", id)
+      .eq("id", utilId)
+      .select("id")
+      .maybeSingle()
+    if (error) throw new ApiError(500, error.message)
+    if (!data) throw new ApiError(404, "Utility not found")
+    return sendOk(res, { id: data.id, deleted: true })
   })
 )

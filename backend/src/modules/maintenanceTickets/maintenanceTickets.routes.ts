@@ -7,16 +7,8 @@ import { ApiError } from "../../utils/errors"
 import { assertOwned } from "../../utils/ownership"
 import { sendOk } from "../../utils/response"
 import { idParamSchema, paginationSchema, uuidSchema } from "../../utils/validation"
-import { esc, notifyAsync } from "../notifications/notify.service"
 
 const statusEnum = z.enum(["open", "in_progress", "closed"])
-
-// Human-readable labels for status-change notifications.
-const STATUS_LABELS: Record<string, string> = {
-  open: "Open",
-  in_progress: "In progress",
-  closed: "Closed",
-}
 
 const createSchema = z.object({
   unit_id: uuidSchema,
@@ -51,15 +43,6 @@ maintenanceTicketsRouter.post(
       .single()
 
     if (error) throw new ApiError(500, error.message)
-
-    // EVENT notification (fire-and-forget).
-    notifyAsync({
-      landlordId,
-      type: "ticket_new",
-      title: "🔧 New maintenance ticket",
-      body: `<b>${esc(body.title)}</b> was reported.`,
-    })
-
     return sendOk(res, data, 201)
   })
 )
@@ -130,17 +113,6 @@ maintenanceTicketsRouter.patch(
 
     if (error) throw new ApiError(500, error.message)
     if (!data) throw new ApiError(404, "Maintenance ticket not found")
-
-    // EVENT notification (fire-and-forget).
-    notifyAsync({
-      landlordId,
-      type: "ticket_status",
-      title: "🔧 Ticket status updated",
-      body: `<b>${esc(String(data.title ?? "Ticket"))}</b> is now ${esc(
-        STATUS_LABELS[body.status] ?? body.status
-      )}.`,
-    })
-
     return sendOk(res, data)
   })
 )
@@ -162,17 +134,6 @@ maintenanceTicketsRouter.post(
 
     if (error) throw new ApiError(500, error.message)
     if (!data) throw new ApiError(404, "Maintenance ticket not found")
-
-    // EVENT notification (fire-and-forget).
-    notifyAsync({
-      landlordId,
-      type: "ticket_status",
-      title: "🔧 Ticket status updated",
-      body: `<b>${esc(String(data.title ?? "Ticket"))}</b> is now ${esc(
-        STATUS_LABELS.closed || "Closed"
-      )}.`,
-    })
-
     return sendOk(res, data)
   })
 )

@@ -16,6 +16,46 @@ import {
   uuidSchema,
 } from "../../utils/validation"
 
+// --- Charge period helpers -------------------------------------------------
+// Pure UTC date math so the covered period is stable regardless of server TZ.
+function shiftCycle(iso: string, cycle: string, count: number): string {
+  const [y, m, d] = iso.split("-").map(Number)
+  const dt = new Date(Date.UTC(y, m - 1, d))
+  switch (cycle) {
+    case "weekly":
+      dt.setUTCDate(dt.getUTCDate() + 7 * count)
+      break
+    case "quarterly":
+      dt.setUTCMonth(dt.getUTCMonth() + 3 * count)
+      break
+    case "yearly":
+      dt.setUTCFullYear(dt.getUTCFullYear() + count)
+      break
+    default:
+      dt.setUTCMonth(dt.getUTCMonth() + count)
+  }
+  return dt.toISOString().slice(0, 10)
+}
+
+function shiftDays(iso: string, days: number): string {
+  const [y, m, d] = iso.split("-").map(Number)
+  const dt = new Date(Date.UTC(y, m - 1, d))
+  dt.setUTCDate(dt.getUTCDate() + days)
+  return dt.toISOString().slice(0, 10)
+}
+
+// prepaid  -> a charge on the due date covers the upcoming cycle.
+// postpaid -> a charge on the due date covers the cycle that just ended.
+function computeChargePeriod(dueDate: string, cycle: string, mode: string) {
+  if (mode === "postpaid") {
+    return { start: shiftCycle(dueDate, cycle, -1), end: shiftDays(dueDate, -1) }
+  }
+  return {
+    start: dueDate,
+    end: shiftDays(shiftCycle(dueDate, cycle, 1), -1),
+  }
+}
+
 const generateSchema = z.object({
   lease_id: uuidSchema,
   // Optional overrides; default amount = lease rent, default due date = 1st of month.
@@ -53,7 +93,9 @@ rentChargesRouter.post(
     // Load lease (scoped) to read the default rent amount.
     const { data: lease, error: leaseError } = await supabase
       .from("leases")
-      .select("id, rent_amount")
+      .select(
+        "id, rent_amount, billing_cycle, billing_mode, increment_pct, increment_months, last_revised_date"
+      )
       .eq("landlord_id", landlordId)
       .eq("id", body.lease_id)
       .maybeSingle()
@@ -61,8 +103,53 @@ rentChargesRouter.post(
     if (leaseError) throw new ApiError(500, leaseError.message)
     if (!lease) throw new ApiError(404, "Lease not found")
 
-    const amount = roundMoney(body.amount ?? Number(lease.rent_amount))
     const dueDate = body.due_date ?? firstDayOfCurrentMonthISO()
+
+    // Auto rent increment: when the lease has an increment schedule and the due
+    // date has reached the next revision, bump the base rent and persist it.
+    let effectiveRent = roundMoney(Number(lease.rent_amount))
+    let appliedRevision: string | null = null
+    if (
+      lease.increment_pct != null &&
+      lease.increment_months != null &&
+      lease.last_revised_date
+    ) {
+      const nextRevision = shiftCycle(
+        String(lease.last_revised_date),
+        "monthly",
+        Number(lease.increment_months)
+      )
+      if (dueDate >= nextRevision) {
+        effectiveRent = roundMoney(
+          effectiveRent * (1 + Number(lease.increment_pct) / 100)
+        )
+        appliedRevision = dueDate
+      }
+    }
+
+    // Fixed recurring utility lines are added on top of the rent.
+    const { data: utils, error: utilErr } = await supabase
+      .from("lease_utilities")
+      .select("billing, rate")
+      .eq("landlord_id", landlordId)
+      .eq("lease_id", body.lease_id)
+    if (utilErr) throw new ApiError(500, utilErr.message)
+    const utilTotal = roundMoney(
+      (utils ?? [])
+        .filter((u) => u.billing === "fixed")
+        .reduce((a, u) => a + Number(u.rate ?? 0), 0)
+    )
+
+    const usingOverride = body.amount != null
+    const amount = usingOverride
+      ? roundMoney(Number(body.amount))
+      : roundMoney(effectiveRent + utilTotal)
+    // The period this charge covers, from the lease billing cycle + mode.
+    const period = computeChargePeriod(
+      dueDate,
+      String(lease.billing_cycle ?? "monthly"),
+      String(lease.billing_mode ?? "prepaid")
+    )
 
     // Prevent duplicate charge for the same lease + due date.
     const { data: existing, error: existingError } = await supabase
@@ -88,6 +175,8 @@ rentChargesRouter.post(
         lease_id: body.lease_id,
         amount,
         due_date: dueDate,
+        period_start: period.start,
+        period_end: period.end,
         status: "due",
         amount_paid: 0,
       })
@@ -95,6 +184,19 @@ rentChargesRouter.post(
       .single()
 
     if (error) throw new ApiError(500, error.message)
+
+    // Persist the raised rent so subsequent charges use the new base.
+    if (appliedRevision && !usingOverride) {
+      await supabase
+        .from("leases")
+        .update({
+          rent_amount: effectiveRent,
+          last_revised_date: appliedRevision,
+        })
+        .eq("landlord_id", landlordId)
+        .eq("id", body.lease_id)
+    }
+
     return sendOk(res, data, 201)
   })
 )

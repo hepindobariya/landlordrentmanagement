@@ -1,9 +1,16 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack"
 import React, { useEffect, useLayoutEffect, useState } from "react"
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native"
-import { DateField } from "../components/DateField"
-import { FormScreen } from "../components/FormScreen"
+import {
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native"
 import { AppButton, CenteredMessage, ErrorText, Field } from "../components/ui"
+import { DatePickerField } from "../components/DatePickerField"
 import { apiFetch } from "../lib/api"
 import type { RootStackParamList } from "../navigation/AppNavigator"
 import { colors, spacing } from "../theme"
@@ -40,6 +47,8 @@ export default function LeaseFormScreen({ route, navigation }: Props) {
   const [tenants, setTenants] = useState<Tenant[]>([])
   const [unitId, setUnitId] = useState<string | null>(null)
   const [tenantId, setTenantId] = useState<string | null>(null)
+  const [unitQuery, setUnitQuery] = useState("")
+  const [tenantQuery, setTenantQuery] = useState("")
   const [rent, setRent] = useState("")
   const [deposit, setDeposit] = useState("")
   const [startDate, setStartDate] = useState("")
@@ -47,6 +56,9 @@ export default function LeaseFormScreen({ route, navigation }: Props) {
   const [cycle, setCycle] = useState<BillingCycle>("monthly")
   const [mode, setMode] = useState<BillingMode>("prepaid")
   const [status, setStatus] = useState<"active" | "ended">("active")
+  const [incrementPct, setIncrementPct] = useState("")
+  const [incrementMonths, setIncrementMonths] = useState("")
+  const [lastRevised, setLastRevised] = useState("")
 
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -73,6 +85,17 @@ export default function LeaseFormScreen({ route, navigation }: Props) {
           setCycle(lease.billing_cycle)
           setMode(lease.billing_mode ?? "prepaid")
           setStatus(lease.status)
+          setIncrementPct(
+            lease.increment_pct != null
+              ? String(Number(lease.increment_pct))
+              : ""
+          )
+          setIncrementMonths(
+            lease.increment_months != null
+              ? String(lease.increment_months)
+              : ""
+          )
+          setLastRevised(lease.last_revised_date ?? "")
         } else {
           const [unitList, tenantList] = await Promise.all([
             apiFetch<Unit[]>("/api/v1/units"),
@@ -128,6 +151,15 @@ export default function LeaseFormScreen({ route, navigation }: Props) {
         }
         if (validDate(startDate.trim())) payload.start_date = startDate.trim()
         payload.end_date = endDate.trim() ? endDate.trim() : null
+        payload.increment_pct = incrementPct.trim()
+          ? Number(incrementPct)
+          : null
+        payload.increment_months = incrementMonths.trim()
+          ? Number(incrementMonths)
+          : null
+        payload.last_revised_date = validDate(lastRevised.trim())
+          ? lastRevised.trim()
+          : null
         await apiFetch<Lease>(`/api/v1/leases/${leaseId}`, {
           method: "PATCH",
           body: JSON.stringify(payload),
@@ -158,6 +190,11 @@ export default function LeaseFormScreen({ route, navigation }: Props) {
           billing_mode: mode,
         }
         if (endDate.trim()) payload.end_date = endDate.trim()
+        if (incrementPct.trim()) payload.increment_pct = Number(incrementPct)
+        if (incrementMonths.trim())
+          payload.increment_months = Number(incrementMonths)
+        if (validDate(lastRevised.trim()))
+          payload.last_revised_date = lastRevised.trim()
         await apiFetch<Lease>("/api/v1/leases", {
           method: "POST",
           body: JSON.stringify(payload),
@@ -201,9 +238,22 @@ export default function LeaseFormScreen({ route, navigation }: Props) {
 
   const busy = saving || ending
   const activeMode = MODES.find((m) => m.value === mode)
+  const unitLabel = (u: Unit) =>
+    `Unit ${u.unit_number}${u.description ? ` · ${u.description}` : ""}`
+  const uq = unitQuery.trim().toLowerCase()
+  const tq = tenantQuery.trim().toLowerCase()
+  const filteredUnits = uq
+    ? units.filter((u) => unitLabel(u).toLowerCase().includes(uq))
+    : units
+  const filteredTenants = tq
+    ? tenants.filter((t) => t.full_name.toLowerCase().includes(tq))
+    : tenants
 
   return (
-    <FormScreen>
+    <ScrollView
+      contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
+    >
       {!isEdit ? (
         <>
           <Text style={styles.fieldLabel}>Unit *</Text>
@@ -213,27 +263,42 @@ export default function LeaseFormScreen({ route, navigation }: Props) {
             </Text>
           ) : (
             <View style={styles.selectWrap}>
-              {units.map((u) => {
-                const selected = unitId === u.id
-                return (
-                  <TouchableOpacity
-                    key={u.id}
-                    style={[styles.option, selected ? styles.optionSelected : null]}
-                    onPress={() => setUnitId(u.id)}
-                    activeOpacity={0.8}
-                  >
-                    <Text
-                      style={[
-                        styles.optionText,
-                        selected ? styles.optionTextSelected : null,
-                      ]}
+              <TextInput
+                style={styles.searchInput}
+                value={unitQuery}
+                onChangeText={setUnitQuery}
+                placeholder="Search units…"
+                placeholderTextColor={colors.subtle}
+              />
+              {filteredUnits.length === 0 ? (
+                <Text style={styles.helper}>No matching units.</Text>
+              ) : (
+                filteredUnits.slice(0, 20).map((u) => {
+                  const selected = unitId === u.id
+                  return (
+                    <TouchableOpacity
+                      key={u.id}
+                      style={[styles.option, selected ? styles.optionSelected : null]}
+                      onPress={() => setUnitId(u.id)}
+                      activeOpacity={0.8}
                     >
-                      Unit {u.unit_number}
-                      {u.description ? ` · ${u.description}` : ""}
-                    </Text>
-                  </TouchableOpacity>
-                )
-              })}
+                      <Text
+                        style={[
+                          styles.optionText,
+                          selected ? styles.optionTextSelected : null,
+                        ]}
+                      >
+                        {unitLabel(u)}
+                      </Text>
+                    </TouchableOpacity>
+                  )
+                })
+              )}
+              {filteredUnits.length > 20 ? (
+                <Text style={styles.helper}>
+                  Showing first 20 — refine your search to narrow down.
+                </Text>
+              ) : null}
             </View>
           )}
 
@@ -244,26 +309,42 @@ export default function LeaseFormScreen({ route, navigation }: Props) {
             </Text>
           ) : (
             <View style={styles.selectWrap}>
-              {tenants.map((t) => {
-                const selected = tenantId === t.id
-                return (
-                  <TouchableOpacity
-                    key={t.id}
-                    style={[styles.option, selected ? styles.optionSelected : null]}
-                    onPress={() => setTenantId(t.id)}
-                    activeOpacity={0.8}
-                  >
-                    <Text
-                      style={[
-                        styles.optionText,
-                        selected ? styles.optionTextSelected : null,
-                      ]}
+              <TextInput
+                style={styles.searchInput}
+                value={tenantQuery}
+                onChangeText={setTenantQuery}
+                placeholder="Search tenants…"
+                placeholderTextColor={colors.subtle}
+              />
+              {filteredTenants.length === 0 ? (
+                <Text style={styles.helper}>No matching tenants.</Text>
+              ) : (
+                filteredTenants.slice(0, 20).map((t) => {
+                  const selected = tenantId === t.id
+                  return (
+                    <TouchableOpacity
+                      key={t.id}
+                      style={[styles.option, selected ? styles.optionSelected : null]}
+                      onPress={() => setTenantId(t.id)}
+                      activeOpacity={0.8}
                     >
-                      {t.full_name}
-                    </Text>
-                  </TouchableOpacity>
-                )
-              })}
+                      <Text
+                        style={[
+                          styles.optionText,
+                          selected ? styles.optionTextSelected : null,
+                        ]}
+                      >
+                        {t.full_name}
+                      </Text>
+                    </TouchableOpacity>
+                  )
+                })
+              )}
+              {filteredTenants.length > 20 ? (
+                <Text style={styles.helper}>
+                  Showing first 20 — refine your search to narrow down.
+                </Text>
+              ) : null}
             </View>
           )}
         </>
@@ -337,17 +418,48 @@ export default function LeaseFormScreen({ route, navigation }: Props) {
         <Text style={styles.modeHint}>{activeMode.hint}</Text>
       ) : null}
 
-      <DateField
-        label={isEdit ? "Start date" : "Start date *"}
-        value={startDate}
-        onChangeText={setStartDate}
+      <Text style={styles.fieldLabel}>Rent increment (optional)</Text>
+      <Text style={styles.helper}>
+        Auto-raise the rent on a schedule. The increase is applied when you
+        generate a charge on or after the next revision date.
+      </Text>
+      <Field
+        label="Increase by (%)"
+        value={incrementPct}
+        onChangeText={setIncrementPct}
+        keyboardType="numeric"
+        placeholder="e.g. 10"
         editable={!busy}
       />
-      <DateField
+      <Field
+        label="Every (months)"
+        value={incrementMonths}
+        onChangeText={setIncrementMonths}
+        keyboardType="numeric"
+        placeholder="e.g. 12"
+        editable={!busy}
+      />
+      <DatePickerField
+        label="Last revised on"
+        value={lastRevised}
+        onChange={setLastRevised}
+        editable={!busy}
+        optional
+      />
+
+      <View style={styles.spacerSm} />
+      <DatePickerField
+        label={isEdit ? "Start date" : "Start date *"}
+        value={startDate}
+        onChange={setStartDate}
+        editable={!busy}
+      />
+      <DatePickerField
         label="End date (optional)"
         value={endDate}
-        onChangeText={setEndDate}
+        onChange={setEndDate}
         editable={!busy}
+        optional
       />
 
       {isEdit ? (
@@ -400,11 +512,12 @@ export default function LeaseFormScreen({ route, navigation }: Props) {
           />
         </>
       ) : null}
-    </FormScreen>
+    </ScrollView>
   )
 }
 
 const styles = StyleSheet.create({
+  content: { padding: spacing.md },
   fieldLabel: {
     fontSize: 14,
     fontWeight: "600",
@@ -419,6 +532,17 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   selectWrap: { marginBottom: spacing.md },
+  searchInput: {
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: colors.text,
+    marginBottom: spacing.sm,
+  },
   option: {
     backgroundColor: colors.card,
     borderWidth: 1,

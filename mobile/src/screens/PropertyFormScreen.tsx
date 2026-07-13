@@ -1,7 +1,13 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack"
 import React, { useEffect, useLayoutEffect, useState } from "react"
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native"
-import { FormScreen } from "../components/FormScreen"
+import {
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native"
 import { AppButton, CenteredMessage, ErrorText, Field } from "../components/ui"
 import { apiFetch } from "../lib/api"
 import type { RootStackParamList } from "../navigation/AppNavigator"
@@ -176,7 +182,10 @@ export default function PropertyFormScreen({ route, navigation }: Props) {
   const busy = saving || deleting
 
   return (
-    <FormScreen>
+    <ScrollView
+      contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
+    >
       <Field
         label="Name *"
         value={name}
@@ -329,7 +338,7 @@ export default function PropertyFormScreen({ route, navigation }: Props) {
           />
         </>
       ) : null}
-    </FormScreen>
+    </ScrollView>
   )
 }
 

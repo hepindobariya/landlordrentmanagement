@@ -27,9 +27,6 @@
         "projectId": "8bfca793-2a17-4708-8f53-c4918336f24b"
       }
     },
-    "owner": "hepindobariyas-team",
-    "plugins": [
-      "@react-native-community/datetimepicker"
-    ]
+    "owner": "hepindobariyas-team"
   }
 }

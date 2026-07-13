@@ -26,6 +26,10 @@ const createSchema = z.object({
   paid_date: isoDateSchema.optional(),
   reference: z.string().max(200).optional(),
   note: z.string().max(500).optional(),
+  // Optional late fee collected on top of the rent (recorded, not applied to
+  // the charge balance). Free-text remarks are internal-only.
+  late_fee: positiveMoneySchema.optional(),
+  remarks: z.string().max(500).optional(),
 })
 
 const listQuerySchema = z
@@ -83,6 +87,8 @@ paymentsRouter.post(
         paid_date: paidDate,
         reference: body.reference ?? null,
         note: body.note ?? null,
+        late_fee: body.late_fee != null ? roundMoney(body.late_fee) : 0,
+        remarks: body.remarks ?? null,
         receipt_no: receiptNo,
       })
       .select("*")

@@ -13,6 +13,8 @@ create table if not exists public.payments (
   paid_date date not null default (now() at time zone 'utc')::date,
   reference text,
   note text,
+  late_fee numeric(12,2) not null default 0 check (late_fee >= 0),
+  remarks text,
   receipt_no text,
   created_at timestamptz not null default now()
 );
@@ -24,3 +26,7 @@ create index if not exists payments_lease_idx on public.payments(lease_id);
 -- Enable RLS as a safety net. The backend uses the service role key (which
 -- bypasses RLS), so app-level landlord_id scoping remains the primary guard.
 alter table public.payments enable row level security;
+
+-- Backfill columns if the table pre-dates these fields (idempotent).
+alter table public.payments add column if not exists late_fee numeric(12,2) not null default 0;
+alter table public.payments add column if not exists remarks text;

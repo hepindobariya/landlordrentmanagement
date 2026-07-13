@@ -5,9 +5,133 @@ import { asyncHandler } from "../../utils/asyncHandler"
 import { currentMonthBoundsISO } from "../../utils/dates"
 import { ApiError } from "../../utils/errors"
 import { sendOk } from "../../utils/response"
+import { z } from "zod"
 import { roundMoney } from "../../utils/validation"
 
+const exportQuerySchema = z.object({
+  type: z.enum(["rent", "tenants", "expenses", "units"]).default("rent"),
+})
+
+function csvEscape(v: unknown): string {
+  const s = v == null ? "" : String(v)
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+}
+
+function toCsv(
+  headers: string[],
+  rows: Array<Array<string | number | null | undefined>>
+): string {
+  const lines = [headers.map(csvEscape).join(",")]
+  for (const r of rows) lines.push(r.map(csvEscape).join(","))
+  return lines.join("\n")
+}
+
 export const reportsRouter = Router()
+
+// GET /api/v1/reports/export?type=rent|tenants|expenses|units
+// Returns a CSV download (text/csv) for the requested dataset, landlord-scoped.
+reportsRouter.get(
+  "/export",
+  asyncHandler(async (req, res) => {
+    const landlordId = getLandlordId(req)
+    const { type } = exportQuerySchema.parse(req.query)
+
+    let headers: string[] = []
+    let rows: Array<Array<string | number | null | undefined>> = []
+
+    if (type === "tenants") {
+      const { data, error } = await supabase
+        .from("tenants")
+        .select("full_name, email, phone, created_at")
+        .eq("landlord_id", landlordId)
+        .order("created_at", { ascending: false })
+      if (error) throw new ApiError(500, error.message)
+      headers = ["Name", "Email", "Phone", "Added"]
+      rows = (data ?? []).map((t) => [
+        t.full_name,
+        t.email,
+        t.phone,
+        String(t.created_at).slice(0, 10),
+      ])
+    } else if (type === "expenses") {
+      const { data, error } = await supabase
+        .from("expenses")
+        .select(
+          "spent_on, category, title, amount, paid, tenant_payable, remarks"
+        )
+        .eq("landlord_id", landlordId)
+        .order("spent_on", { ascending: false })
+      if (error) throw new ApiError(500, error.message)
+      headers = [
+        "Date",
+        "Category",
+        "Title",
+        "Amount",
+        "Paid",
+        "Tenant payable",
+        "Remarks",
+      ]
+      rows = (data ?? []).map((e) => [
+        e.spent_on,
+        e.category,
+        e.title,
+        e.amount,
+        e.paid ? "Yes" : "No",
+        e.tenant_payable ? "Yes" : "No",
+        e.remarks,
+      ])
+    } else if (type === "units") {
+      const { data, error } = await supabase
+        .from("units")
+        .select("unit_number, description, bedrooms, bathrooms")
+        .eq("landlord_id", landlordId)
+        .order("created_at", { ascending: false })
+      if (error) throw new ApiError(500, error.message)
+      headers = ["Unit", "Description", "Bedrooms", "Bathrooms"]
+      rows = (data ?? []).map((u) => [
+        u.unit_number,
+        u.description,
+        u.bedrooms,
+        u.bathrooms,
+      ])
+    } else {
+      const { data, error } = await supabase
+        .from("rent_charges")
+        .select(
+          "due_date, amount, amount_paid, status, paid_date, period_start, period_end"
+        )
+        .eq("landlord_id", landlordId)
+        .order("due_date", { ascending: false })
+      if (error) throw new ApiError(500, error.message)
+      headers = [
+        "Due date",
+        "Amount",
+        "Amount paid",
+        "Status",
+        "Paid on",
+        "Period start",
+        "Period end",
+      ]
+      rows = (data ?? []).map((c) => [
+        c.due_date,
+        c.amount,
+        c.amount_paid,
+        c.status,
+        c.paid_date,
+        c.period_start,
+        c.period_end,
+      ])
+    }
+
+    const csv = toCsv(headers, rows)
+    res.setHeader("Content-Type", "text/csv; charset=utf-8")
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${type}-export.csv"`
+    )
+    return res.status(200).send(csv)
+  })
+)
 
 // GET /api/v1/reports/summary
 // Landlord dashboard: collections vs expected this month, outstanding totals

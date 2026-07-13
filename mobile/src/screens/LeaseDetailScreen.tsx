@@ -10,12 +10,18 @@ import {
   View,
 } from "react-native"
 import { DatePickerField } from "../components/DatePickerField"
-import { AppButton, CenteredMessage, ErrorText, Field } from "../components/ui"
+import {
+  AppButton,
+  CenteredMessage,
+  ErrorText,
+  Field,
+  StatusBadge,
+} from "../components/ui"
 import { apiFetch } from "../lib/api"
 import { formatDate, formatMoney, titleCase } from "../lib/format"
 import type { RootStackParamList } from "../navigation/AppNavigator"
 import { colors, spacing } from "../theme"
-import type { Lease, RentCharge, Tenant, Unit } from "../types"
+import type { Lease, LeaseUtility, RentCharge, Tenant, Unit } from "../types"
 
 type Props = NativeStackScreenProps<RootStackParamList, "LeaseDetail">
 
@@ -26,6 +32,11 @@ export default function LeaseDetailScreen({ route, navigation }: Props) {
   const [tenant, setTenant] = useState<Tenant | null>(null)
   const [unit, setUnit] = useState<Unit | null>(null)
   const [charges, setCharges] = useState<RentCharge[]>([])
+  const [utilities, setUtilities] = useState<LeaseUtility[]>([])
+  const [utilKind, setUtilKind] = useState("")
+  const [utilRate, setUtilRate] = useState("")
+  const [utilBilling, setUtilBilling] = useState<"fixed" | "metered">("fixed")
+  const [addingUtil, setAddingUtil] = useState(false)
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
   const [showSettle, setShowSettle] = useState(false)
@@ -53,17 +64,21 @@ export default function LeaseDetailScreen({ route, navigation }: Props) {
     setError(null)
     try {
       const leaseData = await apiFetch<Lease>(`/api/v1/leases/${leaseId}`)
-      const [tenantData, unitData, chargeData] = await Promise.all([
+      const [tenantData, unitData, chargeData, utilData] = await Promise.all([
         apiFetch<Tenant>(`/api/v1/tenants/${leaseData.tenant_id}`).catch(
           () => null
         ),
         apiFetch<Unit>(`/api/v1/units/${leaseData.unit_id}`).catch(() => null),
         apiFetch<RentCharge[]>(`/api/v1/rent-charges?lease_id=${leaseId}`),
+        apiFetch<LeaseUtility[]>(`/api/v1/leases/${leaseId}/utilities`).catch(
+          () => []
+        ),
       ])
       setLease(leaseData)
       setTenant(tenantData)
       setUnit(unitData)
       setCharges(chargeData)
+      setUtilities(utilData)
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load lease.")
     } finally {
@@ -91,6 +106,59 @@ export default function LeaseDetailScreen({ route, navigation }: Props) {
       Alert.alert("Could not generate charge", msg)
     } finally {
       setGenerating(false)
+    }
+  }
+
+  async function addUtility() {
+    const rateNum = Number(utilRate.replace(/[\u20B9,\s]/g, ""))
+    if (!utilKind.trim()) {
+      setError("Enter a utility name.")
+      return
+    }
+    if (!Number.isFinite(rateNum) || rateNum < 0) {
+      setError("Enter a valid rate.")
+      return
+    }
+    setAddingUtil(true)
+    setError(null)
+    try {
+      await apiFetch(`/api/v1/leases/${leaseId}/utilities`, {
+        method: "POST",
+        body: JSON.stringify({
+          kind: utilKind.trim(),
+          billing: utilBilling,
+          rate: rateNum,
+        }),
+      })
+      setUtilKind("")
+      setUtilRate("")
+      setUtilBilling("fixed")
+      await load()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to add utility.")
+    } finally {
+      setAddingUtil(false)
+    }
+  }
+
+  function confirmDeleteUtility(id: string) {
+    Alert.alert("Remove utility?", "This removes this recurring charge.", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Remove", style: "destructive", onPress: () => deleteUtility(id) },
+    ])
+  }
+
+  async function deleteUtility(id: string) {
+    try {
+      await apiFetch(`/api/v1/leases/${leaseId}/utilities/${id}`, {
+        method: "DELETE",
+      })
+      await load()
+    } catch (e) {
+      Alert.alert(
+        "Could not remove",
+        e instanceof Error ? e.message : "Failed."
+      )
     }
   }
 
@@ -236,6 +304,80 @@ export default function LeaseDetailScreen({ route, navigation }: Props) {
       ) : null}
 
       <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Recurring utilities</Text>
+      </View>
+      <Text style={styles.utilHint}>
+        Fixed utilities are added on top of the rent when you generate a charge.
+      </Text>
+      {utilities.length === 0 ? (
+        <Text style={styles.emptyText}>No utilities added.</Text>
+      ) : (
+        utilities.map((u) => (
+          <View key={u.id} style={styles.utilRow}>
+            <View style={styles.chargeInfo}>
+              <Text style={styles.chargeAmount}>{titleCase(u.kind)}</Text>
+              <Text style={styles.chargeDue}>
+                {u.billing === "fixed" ? "Fixed" : "Metered"} ·{" "}
+                {formatMoney(u.rate)}
+              </Text>
+            </View>
+            <TouchableOpacity onPress={() => confirmDeleteUtility(u.id)}>
+              <Text style={styles.removeText}>Remove</Text>
+            </TouchableOpacity>
+          </View>
+        ))
+      )}
+      {lease.status === "active" ? (
+        <View style={styles.card}>
+          <Field
+            label="Utility name"
+            value={utilKind}
+            onChangeText={setUtilKind}
+            placeholder="e.g. Water, Maintenance"
+            editable={!addingUtil}
+          />
+          <View style={styles.pillRow}>
+            {(["fixed", "metered"] as const).map((b) => {
+              const selected = utilBilling === b
+              return (
+                <TouchableOpacity
+                  key={b}
+                  style={[styles.pill, selected ? styles.pillSelected : null]}
+                  onPress={() => setUtilBilling(b)}
+                  activeOpacity={0.8}
+                >
+                  <Text
+                    style={[
+                      styles.pillText,
+                      selected ? styles.pillTextSelected : null,
+                    ]}
+                  >
+                    {b}
+                  </Text>
+                </TouchableOpacity>
+              )
+            })}
+          </View>
+          <Field
+            label={
+              utilBilling === "fixed" ? "Amount per cycle" : "Rate per unit"
+            }
+            value={utilRate}
+            onChangeText={setUtilRate}
+            placeholder="e.g. 500"
+            keyboardType="numeric"
+            editable={!addingUtil}
+          />
+          <AppButton
+            title="Add utility"
+            variant="secondary"
+            onPress={addUtility}
+            loading={addingUtil}
+          />
+        </View>
+      ) : null}
+
+      <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Rent charges</Text>
       </View>
 
@@ -274,20 +416,14 @@ export default function LeaseDetailScreen({ route, navigation }: Props) {
                 <Text style={styles.chargeDue}>
                   Due {formatDate(c.due_date)}
                 </Text>
+                {c.period_start && c.period_end ? (
+                  <Text style={styles.chargePeriod}>
+                    Rent for {formatDate(c.period_start)} – {formatDate(c.period_end)}
+                  </Text>
+                ) : null}
               </View>
               <View style={styles.chargeRight}>
-                <View
-                  style={[
-                    styles.badge,
-                    isPaid
-                      ? styles.badgePaid
-                      : c.status === "partial"
-                        ? styles.badgePartial
-                        : styles.badgeDue,
-                  ]}
-                >
-                  <Text style={styles.badgeText}>{titleCase(c.status)}</Text>
-                </View>
+                <StatusBadge status={c.status} />
                 {!isPaid ? (
                   <Text style={styles.chargeRemaining}>
                     {formatMoney(remaining)} left
@@ -362,8 +498,44 @@ const styles = StyleSheet.create({
   chargeInfo: { flex: 1 },
   chargeAmount: { fontSize: 16, fontWeight: "700", color: colors.text },
   chargeDue: { fontSize: 13, color: colors.muted, marginTop: 2 },
+  chargePeriod: { fontSize: 12, color: colors.subtle, marginTop: 2 },
   chargeRight: { alignItems: "flex-end" },
   chargeRemaining: { fontSize: 12, color: colors.danger, marginTop: 4 },
+  utilHint: { fontSize: 13, color: colors.muted, marginBottom: spacing.sm },
+  utilRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: colors.card,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  removeText: { fontSize: 13, fontWeight: "700", color: colors.danger },
+  pillRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  pill: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  pillSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
+  pillText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: colors.text,
+    textTransform: "capitalize",
+  },
+  pillTextSelected: { color: colors.white },
   badge: {
     borderRadius: 999,
     paddingHorizontal: spacing.sm,

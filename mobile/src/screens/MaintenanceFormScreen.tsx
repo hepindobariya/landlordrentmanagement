@@ -1,7 +1,12 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack"
 import React, { useEffect, useLayoutEffect, useState } from "react"
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native"
-import { FormScreen } from "../components/FormScreen"
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native"
 import { AppButton, CenteredMessage, ErrorText, Field } from "../components/ui"
 import { apiFetch } from "../lib/api"
 import { titleCase } from "../lib/format"
@@ -114,7 +119,7 @@ export default function MaintenanceFormScreen({ route, navigation }: Props) {
   // EDIT MODE: show ticket details + status controls.
   if (isEdit) {
     return (
-      <FormScreen>
+      <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.card}>
           <Text style={styles.ticketTitle}>{title}</Text>
           {description ? (
@@ -150,13 +155,16 @@ export default function MaintenanceFormScreen({ route, navigation }: Props) {
         </View>
 
         {error ? <ErrorText text={error} /> : null}
-      </FormScreen>
+      </ScrollView>
     )
   }
 
   // CREATE MODE.
   return (
-    <FormScreen>
+    <ScrollView
+      contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
+    >
       <Text style={styles.fieldLabel}>Unit *</Text>
       {units.length === 0 ? (
         <Text style={styles.helper}>
@@ -208,11 +216,12 @@ export default function MaintenanceFormScreen({ route, navigation }: Props) {
 
       <View style={styles.spacerMd} />
       <AppButton title="Create Ticket" onPress={handleCreate} loading={saving} />
-    </FormScreen>
+    </ScrollView>
   )
 }
 
 const styles = StyleSheet.create({
+  content: { padding: spacing.md },
   card: {
     backgroundColor: colors.card,
     borderRadius: 12,

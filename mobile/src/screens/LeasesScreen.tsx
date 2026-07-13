@@ -9,9 +9,9 @@ import {
   TouchableOpacity,
   View,
 } from "react-native"
-import { CenteredMessage } from "../components/ui"
+import { CenteredMessage, StatusBadge } from "../components/ui"
 import { apiFetch } from "../lib/api"
-import { formatMoney, titleCase } from "../lib/format"
+import { formatMoney } from "../lib/format"
 import type { RootStackParamList } from "../navigation/AppNavigator"
 import { colors, spacing } from "../theme"
 import type { Lease, Tenant, Unit } from "../types"
@@ -114,7 +114,6 @@ export default function LeasesScreen({ navigation }: Props) {
       renderItem={({ item }) => {
         const tenant = tenants[item.tenant_id]
         const unit = units[item.unit_id]
-        const isActive = item.status === "active"
         return (
           <TouchableOpacity
             style={styles.card}
@@ -127,21 +126,7 @@ export default function LeasesScreen({ navigation }: Props) {
               <Text style={styles.cardTitle}>
                 {tenant ? tenant.full_name : "Unknown tenant"}
               </Text>
-              <View
-                style={[
-                  styles.badge,
-                  isActive ? styles.badgeActive : styles.badgeEnded,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.badgeText,
-                    isActive ? styles.badgeTextActive : styles.badgeTextEnded,
-                  ]}
-                >
-                  {titleCase(item.status)}
-                </Text>
-              </View>
+              <StatusBadge status={item.status} />
             </View>
             <Text style={styles.cardSubtitle}>
               Unit {unit ? unit.unit_number : "—"} · {formatMoney(item.rent_amount)}

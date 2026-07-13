@@ -36,12 +36,45 @@ export type Unit = {
   created_at: string
 }
 
+export type VerificationStatus =
+  | "unverified"
+  | "pending"
+  | "verified"
+  | "failed"
+
 export type Tenant = {
   id: string
   landlord_id: string
   full_name: string
   email: string | null
   phone: string | null
+  pan: string | null
+  aadhaar_last4: string | null
+  verification_status: VerificationStatus | null
+  verified_at: string | null
+  created_at: string
+}
+
+export type CoTenant = {
+  id: string
+  landlord_id: string
+  tenant_id: string
+  full_name: string
+  relation: string | null
+  phone: string | null
+  email: string | null
+  same_address: boolean
+  created_at: string
+}
+
+export type TenantReference = {
+  id: string
+  landlord_id: string
+  tenant_id: string
+  full_name: string
+  relation: string | null
+  phone: string | null
+  email: string | null
   created_at: string
 }
 
@@ -61,9 +94,24 @@ export type Lease = {
   billing_cycle: BillingCycle
   billing_mode: BillingMode
   status: LeaseStatus
+  increment_pct: number | string | null
+  increment_months: number | null
+  last_revised_date: string | null
   deposit_returned: number | string | null
   final_settlement_date: string | null
   settlement_notes: string | null
+  created_at: string
+}
+
+export type UtilityBilling = "metered" | "fixed"
+
+export type LeaseUtility = {
+  id: string
+  landlord_id: string
+  lease_id: string
+  kind: string
+  billing: UtilityBilling
+  rate: number | string
   created_at: string
 }
 
@@ -77,6 +125,8 @@ export type RentCharge = {
   amount_paid: number | string
   due_date: string
   paid_date: string | null
+  period_start: string | null
+  period_end: string | null
   status: RentChargeStatus
   created_at: string
 }
@@ -113,6 +163,8 @@ export type Payment = {
   paid_date: string
   reference: string | null
   note: string | null
+  late_fee: number | string
+  remarks: string | null
   receipt_no: string | null
   created_at: string
 }

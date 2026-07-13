@@ -5,13 +5,10 @@ import express, {
   type Response,
 } from "express"
 import helmet from "helmet"
-import path from "path"
 import { ZodError } from "zod"
 import { env } from "./config/env"
 import { supabase } from "./lib/supabase"
 import { downloadRouter } from "./modules/download/download.routes"
-import { internalNotificationsRouter } from "./modules/notifications/internalNotifications.routes"
-import { telegramWebhookRouter } from "./modules/notifications/telegramWebhook.routes"
 import { webhooksRouter } from "./modules/webhooks/webhooks.routes"
 import { apiRouter } from "./routes"
 import { ApiError } from "./utils/errors"
@@ -24,7 +21,7 @@ app.use(helmet({ contentSecurityPolicy: false }))
 app.use(cors())
 
 // ---------------------------------------------------------------------------
-// PUBLIC RAW routes (no Bearer auth). Mounted BEFORE express.json() because the
+// PUBLIC routes (no Bearer auth). Mounted BEFORE express.json() because the
 // EAS webhook needs the RAW request body for HMAC signature verification.
 // (The /download route is a GET returning HTML, so it needs no body parsing.)
 // ---------------------------------------------------------------------------
@@ -32,21 +29,12 @@ app.use("/webhooks", webhooksRouter)
 app.use("/download", downloadRouter)
 
 // Serve the static frontend (landing page and PWA)
+import path from "path"
 app.use(express.static(path.join(process.cwd(), "public")))
+
 
 // JSON parsing for the rest of the API.
 app.use(express.json())
-
-// ---------------------------------------------------------------------------
-// PUBLIC JSON routes (no Bearer auth) that DO need a parsed JSON body.
-// - /webhooks/telegram: receives Telegram bot updates (guarded by an
-//   unguessable link token, not by auth). The EAS webhooksRouter above has no
-//   /telegram route, so requests fall through to this handler after JSON parse.
-// - /internal/notifications/run: guarded by the x-cron-secret header.
-// Mounted before /api/v1 so they never hit requireAuth.
-// ---------------------------------------------------------------------------
-app.use("/webhooks", telegramWebhookRouter)
-app.use("/internal", internalNotificationsRouter)
 
 // Health check — verifies the server is up and Supabase is reachable.
 app.get("/health", async (_req: Request, res: Response) => {

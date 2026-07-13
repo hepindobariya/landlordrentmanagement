@@ -36,6 +36,8 @@ export default function RentCollectScreen({ route, navigation }: Props) {
   const [paidDate, setPaidDate] = useState(todayISO())
   const [reference, setReference] = useState("")
   const [note, setNote] = useState("")
+  const [lateFee, setLateFee] = useState("")
+  const [remarks, setRemarks] = useState("")
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -94,6 +96,15 @@ export default function RentCollectScreen({ route, navigation }: Props) {
     if (ref) payload.reference = ref
     if (n) payload.note = n
 
+    const lf = lateFee.trim() ? Number(lateFee) : 0
+    if (!Number.isFinite(lf) || lf < 0) {
+      setError("Enter a valid late fee.")
+      return
+    }
+    if (lf > 0) payload.late_fee = lf
+    const rmk = remarks.trim()
+    if (rmk) payload.remarks = rmk
+
     setSaving(true)
     try {
       await apiFetch("/api/v1/payments", {
@@ -142,6 +153,14 @@ export default function RentCollectScreen({ route, navigation }: Props) {
         placeholder="0"
         editable={!saving}
       />
+      <Field
+        label="Late fee (optional)"
+        value={lateFee}
+        onChangeText={setLateFee}
+        keyboardType="numeric"
+        placeholder="0"
+        editable={!saving}
+      />
 
       <Text style={styles.fieldLabel}>Method</Text>
       <View style={styles.methodRow}>
@@ -186,6 +205,14 @@ export default function RentCollectScreen({ route, navigation }: Props) {
         value={note}
         onChangeText={setNote}
         placeholder="Any details to remember"
+        multiline
+        editable={!saving}
+      />
+      <Field
+        label="Remarks (internal)"
+        value={remarks}
+        onChangeText={setRemarks}
+        placeholder="Private notes, not shown on receipt"
         multiline
         editable={!saving}
       />

@@ -151,6 +151,57 @@ export function CenteredMessage({
   )
 }
 
+// Unified status pill. Maps a status string to a consistent color tone so
+// "paid = green, partial = amber, overdue = red" is identical everywhere.
+type BadgeTone = "success" | "warn" | "danger" | "neutral"
+
+const STATUS_TONE: Record<string, BadgeTone> = {
+  paid: "success",
+  active: "success",
+  verified: "success",
+  closed: "success",
+  partial: "warn",
+  pending: "warn",
+  in_progress: "warn",
+  due: "danger",
+  overdue: "danger",
+  unverified: "danger",
+  failed: "danger",
+  open: "danger",
+  ended: "neutral",
+}
+
+export function StatusBadge({
+  status,
+  label,
+}: {
+  status: string
+  label?: string
+}) {
+  const tone = STATUS_TONE[status] ?? "neutral"
+  const wrapStyle = [
+    styles.badge,
+    tone === "success" ? styles.badgeSuccess : null,
+    tone === "warn" ? styles.badgeWarn : null,
+    tone === "danger" ? styles.badgeDanger : null,
+    tone === "neutral" ? styles.badgeNeutral : null,
+  ]
+  const textStyle = [
+    styles.badgeText,
+    tone === "success" ? styles.badgeTextSuccess : null,
+    tone === "warn" ? styles.badgeTextWarn : null,
+    tone === "danger" ? styles.badgeTextDanger : null,
+    tone === "neutral" ? styles.badgeTextNeutral : null,
+  ]
+  const raw = label ?? status.replace(/_/g, " ")
+  const text = raw.charAt(0).toUpperCase() + raw.slice(1)
+  return (
+    <View style={wrapStyle}>
+      <Text style={textStyle}>{text}</Text>
+    </View>
+  )
+}
+
 const styles = StyleSheet.create({
   btn: {
     borderRadius: radius.md,
@@ -252,4 +303,20 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     fontSize: font.body,
   },
+
+  badge: {
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    alignSelf: "flex-start",
+  },
+  badgeText: { fontSize: font.tiny, fontWeight: "700" },
+  badgeSuccess: { backgroundColor: colors.successBg },
+  badgeTextSuccess: { color: colors.success },
+  badgeWarn: { backgroundColor: colors.warnBg },
+  badgeTextWarn: { color: colors.warn },
+  badgeDanger: { backgroundColor: colors.dangerBg },
+  badgeTextDanger: { color: colors.danger },
+  badgeNeutral: { backgroundColor: colors.background },
+  badgeTextNeutral: { color: colors.muted },
 })
