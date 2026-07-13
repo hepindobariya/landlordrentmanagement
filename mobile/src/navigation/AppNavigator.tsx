@@ -54,6 +54,9 @@ export type RootStackParamList = {
   MaintenanceForm: { ticketId?: string }
   Expenses: undefined
   ExpenseForm: { expenseId?: string }
+  Notifications: undefined
+  PaymentHistory: { leaseId: string; chargeId?: string }
+  TenantDetail: { tenantId: string }
 }
 
 const Tab = createBottomTabNavigator()
@@ -188,10 +191,10 @@ function MainTabs() {
       tabBar={(props) => <FloatingTabBar {...props} />}
       screenOptions={tabScreenOptions}
     >
-      <Tab.Screen name="Home" component={HomeScreen} />
-      <Tab.Screen name="Properties" component={PropertiesScreen} />
-      <Tab.Screen name="Leases" component={LeasesScreen} />
-      <Tab.Screen name="Maintenance" component={MaintenanceScreen} />
+      <Tab.Screen name="Home" component={HomeScreen as any} />
+      <Tab.Screen name="Properties" component={PropertiesScreen as any} />
+      <Tab.Screen name="Leases" component={LeasesScreen as any} />
+      <Tab.Screen name="Maintenance" component={MaintenanceScreen as any} />
     </Tab.Navigator>
   )
 }

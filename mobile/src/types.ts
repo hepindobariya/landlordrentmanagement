@@ -117,6 +117,24 @@ export type LeaseUtility = {
 
 export type RentChargeStatus = "due" | "paid" | "partial"
 
+export type CalendarCharge = {
+  id: string
+  lease_id: string
+  amount: number | string
+  amount_paid: number | string
+  due_date: string
+  paid_date: string | null
+  status: RentChargeStatus
+  tenant_name: string
+}
+
+export type MonthTrend = {
+  month: string
+  collected: number
+  expected: number
+  outstanding: number
+}
+
 export type RentCharge = {
   id: string
   landlord_id: string

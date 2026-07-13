@@ -96,7 +96,7 @@ export default function HomeScreen({ navigation }: Props) {
   const expected = summary ? Number(summary.expected_this_month) : 0
   const collected = summary ? Number(summary.collected_this_month) : 0
   const pct = expected > 0 ? Math.min(100, Math.round((collected / expected) * 100)) : 0
-  const progressStyle = [styles.progressFill, { width: `${pct}%` }]
+  const progressStyle = [styles.progressFill, { width: `${pct}%` as any }]
 
   return (
     <ScrollView

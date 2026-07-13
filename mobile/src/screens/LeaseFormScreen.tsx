@@ -9,7 +9,8 @@ import {
   View,
 } from "react-native"
 import { FormScreen } from "../components/FormScreen"
-import { AppButton, CenteredMessage, DatePickerField, ErrorText, Field } from "../components/ui"
+import { DatePickerField } from "../components/DatePickerField"
+import { AppButton, CenteredMessage, ErrorText, Field } from "../components/ui"
 import { apiFetch } from "../lib/api"
 import type { RootStackParamList } from "../navigation/AppNavigator"
 import { colors, spacing } from "../theme"
@@ -447,13 +448,13 @@ export default function LeaseFormScreen({ route, navigation }: Props) {
       <DatePickerField
         label={isEdit ? "Start date" : "Start date *"}
         value={startDate}
-        onChangeText={setStartDate}
+        onChange={setStartDate}
         editable={!busy}
       />
       <DatePickerField
         label="End date (optional)"
         value={endDate}
-        onChangeText={setEndDate}
+        onChange={setEndDate}
         editable={!busy}
       />
 
