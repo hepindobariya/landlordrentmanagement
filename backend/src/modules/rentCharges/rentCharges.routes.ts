@@ -19,7 +19,10 @@ import {
 // --- Charge period helpers -------------------------------------------------
 // Pure UTC date math so the covered period is stable regardless of server TZ.
 function shiftCycle(iso: string, cycle: string, count: number): string {
-  const [y, m, d] = iso.split("-").map(Number)
+  const parts = iso.split("-").map(Number)
+  const y = parts[0] ?? 0
+  const m = parts[1] ?? 1
+  const d = parts[2] ?? 1
   const dt = new Date(Date.UTC(y, m - 1, d))
   switch (cycle) {
     case "weekly":
@@ -38,7 +41,10 @@ function shiftCycle(iso: string, cycle: string, count: number): string {
 }
 
 function shiftDays(iso: string, days: number): string {
-  const [y, m, d] = iso.split("-").map(Number)
+  const parts = iso.split("-").map(Number)
+  const y = parts[0] ?? 0
+  const m = parts[1] ?? 1
+  const d = parts[2] ?? 1
   const dt = new Date(Date.UTC(y, m - 1, d))
   dt.setUTCDate(dt.getUTCDate() + days)
   return dt.toISOString().slice(0, 10)
