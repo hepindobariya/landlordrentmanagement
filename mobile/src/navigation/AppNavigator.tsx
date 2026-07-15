@@ -32,6 +32,9 @@ import RentCollectScreen from "../screens/RentCollectScreen"
 import TenantFormScreen from "../screens/TenantFormScreen"
 import TenantsScreen from "../screens/TenantsScreen"
 import UnitFormScreen from "../screens/UnitFormScreen"
+import NotificationsScreen from "../screens/NotificationsScreen"
+import PaymentHistoryScreen from "../screens/PaymentHistoryScreen"
+import TenantDetailScreen from "../screens/TenantDetailScreen"
 import { colors, font, radius, shadow, spacing } from "../theme"
 
 // Route names + the params each screen expects.
@@ -242,6 +245,9 @@ export default function AppNavigator() {
           options={expensesOptions}
         />
         <Stack.Screen name="ExpenseForm" component={ExpenseFormScreen} />
+        <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ title: "Alerts & Telegram" }} />
+        <Stack.Screen name="PaymentHistory" component={PaymentHistoryScreen} options={{ title: "Payment History" }} />
+        <Stack.Screen name="TenantDetail" component={TenantDetailScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   )
